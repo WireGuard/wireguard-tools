@@ -9,6 +9,7 @@
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <linux/genetlink.h>
+#include <linux/wireguard.h>
 #include "mnlg.h"
 #endif
 #include <netinet/in.h>
@@ -38,7 +39,6 @@
 #include "containers.h"
 #include "encoding.h"
 #include "curve25519.h"
-#include "../uapi/wireguard.h"
 
 #define SOCK_PATH RUNSTATEDIR "/wireguard/"
 #define SOCK_SUFFIX ".sock"

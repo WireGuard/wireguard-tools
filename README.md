@@ -36,6 +36,7 @@ This command takes into account several environment variables:
   * `WITH_BASHCOMPLETION`  default: [auto-detect]
   * `WITH_WGQUICK`         default: [auto-detect]
   * `WITH_SYSTEMDUNITS`    default: [auto-detect]
+  * `DEBUG`                default:
 
 The first section is rather standard. The second section is not:
 
@@ -60,6 +61,8 @@ The first section is rather standard. The second section is not:
     wg-quick(8). If you don't use systemd, you certainly don't want this, and
     should set it to `no`. If systemd isn't auto-detected, but you still would
     like to install it, set this to `yes`.
+
+  * `DEBUG` decides whether to build with `-g`, when set to `yes`.
 
 If you're a simple `make && make install` kind of user, you can get away with
 not setting these variables and relying on the auto-detection. However, if

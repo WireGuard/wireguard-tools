@@ -43,7 +43,7 @@ CFLAGS += -std=gnu99 -D_GNU_SOURCE
 CFLAGS += -Wall -Wextra
 CFLAGS += -MMD -MP
 CFLAGS += -DRUNSTATEDIR="\"$(RUNSTATEDIR)\""
-ifeq ($(DEBUG_TOOLS),y)
+ifeq ($(DEBUG),yes)
 CFLAGS += -g
 endif
 ifeq ($(PLATFORM),linux)

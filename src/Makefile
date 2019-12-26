@@ -96,9 +96,6 @@ install: wg
 	@[ "$(WITH_WGQUICK)" = "yes" -a "$(WITH_SYSTEMDUNITS)" = "yes" ] || exit 0; \
 	install -v -d "$(DESTDIR)$(SYSTEMDUNITDIR)" && install -v -m 0644 systemd/wg-quick@.service "$(DESTDIR)$(SYSTEMDUNITDIR)/wg-quick@.service"
 
-help:
-	@cat INSTALL
-
-.PHONY: clean install help
+.PHONY: clean install
 
 -include *.d

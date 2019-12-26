@@ -96,6 +96,14 @@ install: wg
 	@[ "$(WITH_WGQUICK)" = "yes" -a "$(WITH_SYSTEMDUNITS)" = "yes" ] || exit 0; \
 	install -v -d "$(DESTDIR)$(SYSTEMDUNITDIR)" && install -v -m 0644 systemd/wg-quick@.service "$(DESTDIR)$(SYSTEMDUNITDIR)/wg-quick@.service"
 
-.PHONY: clean install
+wg.o: version.h
+version.h:
+	@export GIT_CEILING_DIRECTORIES="$(PWD)/../.." && \
+	ver="#define WIREGUARD_TOOLS_VERSION \"$$(git describe --dirty 2>/dev/null)\"" && \
+	[ "$$(cat version.h 2>/dev/null)" != "$$ver" ] && \
+	echo "$$ver" > version.h && \
+	git update-index --assume-unchanged version.h || true
+
+.PHONY: clean install version.h
 
 -include *.d

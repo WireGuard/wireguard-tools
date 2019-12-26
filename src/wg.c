@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "subcommands.h"
+#include "version.h"
 
 const char *PROG_NAME;
 
@@ -40,6 +41,10 @@ int main(int argc, char *argv[])
 {
 	PROG_NAME = argv[0];
 
+	if (argc == 2 && (!strcmp(argv[1], "-v") || !strcmp(argv[1], "--version") || !strcmp(argv[1], "version"))) {
+		printf("wireguard-tools v%s - https://git.zx2c4.com/wireguard-tools/\n", WIREGUARD_TOOLS_VERSION);
+		return 0;
+	}
 	if (argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help") || !strcmp(argv[1], "help"))) {
 		show_usage(stdout);
 		return 0;

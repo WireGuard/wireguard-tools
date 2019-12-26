@@ -104,6 +104,9 @@ version.h:
 	echo "$$ver" > version.h && \
 	git update-index --assume-unchanged version.h || true
 
-.PHONY: clean install version.h
+check: clean
+	scan-build --html-title=wireguard-tools -maxloop 100 --view --keep-going $(MAKE) wg
+
+.PHONY: clean install version.h check
 
 -include *.d

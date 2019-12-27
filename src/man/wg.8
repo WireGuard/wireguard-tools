@@ -59,7 +59,7 @@ by \fICONFIGURATION FILE FORMAT\fP below.
 Sets configuration values for the specified \fI<interface>\fP. Multiple
 \fIpeer\fPs may be specified, and if the \fIremove\fP argument is given
 for a peer, that peer is removed, not configured. If \fIlisten-port\fP
-is not specified, the port will be chosen randomly when the
+is not specified, or set to 0, the port will be chosen randomly when the
 interface comes up. Both \fIprivate-key\fP and \fIpreshared-key\fP must
 be a files, because command line arguments are not considered private on
 most systems but if you are using

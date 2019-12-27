@@ -46,6 +46,10 @@ CFLAGS += -DRUNSTATEDIR="\"$(RUNSTATEDIR)\""
 ifeq ($(DEBUG),yes)
 CFLAGS += -g
 endif
+GIT_VERSION := $(shell GIT_CEILING_DIRECTORIES="$(PWD)/../.." git describe --dirty 2>/dev/null)
+ifneq ($(GIT_VERSION),)
+CFLAGS += -D'WIREGUARD_TOOLS_VERSION="$(GIT_VERSION:v%=%)"'
+endif
 ifeq ($(PLATFORM),linux)
 LIBMNL_CFLAGS := $(shell $(PKG_CONFIG) --cflags libmnl 2>/dev/null)
 LIBMNL_LDLIBS := $(shell $(PKG_CONFIG) --libs libmnl 2>/dev/null || echo -lmnl)
@@ -96,17 +100,9 @@ install: wg
 	@[ "$(WITH_WGQUICK)" = "yes" -a "$(WITH_SYSTEMDUNITS)" = "yes" ] || exit 0; \
 	install -v -d "$(DESTDIR)$(SYSTEMDUNITDIR)" && install -v -m 0644 systemd/wg-quick@.service "$(DESTDIR)$(SYSTEMDUNITDIR)/wg-quick@.service"
 
-wg.o: version.h
-version.h:
-	@export GIT_CEILING_DIRECTORIES="$(PWD)/../.." && \
-	ver="#define WIREGUARD_TOOLS_VERSION \"$$(git describe --dirty 2>/dev/null)\"" && \
-	[ "$$(cat version.h 2>/dev/null)" != "$$ver" ] && \
-	echo "$$ver" > version.h && \
-	git update-index --assume-unchanged version.h || true
-
 check: clean
 	scan-build --html-title=wireguard-tools -maxloop 100 --view --keep-going $(MAKE) wg
 
-.PHONY: clean install version.h check
+.PHONY: clean install check
 
 -include *.d

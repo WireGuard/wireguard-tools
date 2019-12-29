@@ -9,6 +9,9 @@
 #include <linux/wireguard.h>
 #include "netlink.h"
 #endif
+#ifdef __OpenBSD__
+#include <net/if_wg.h>
+#endif
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <net/if.h>
@@ -922,13 +925,269 @@ out:
 }
 #endif
 
+#ifdef __OpenBSD__
+int s = -1;
+
+void
+getsock()
+{
+	if (s < 0)
+		s = socket(AF_INET, SOCK_DGRAM, 0);
+}
+
+static int kernel_get_wireguard_interfaces(struct string_list *list)
+{
+	struct ifgroupreq ifgr;
+	struct ifg_req *ifg;
+	size_t len = 0;
+	int ret = 0;
+
+	getsock();
+
+	bzero(&ifgr, sizeof(ifgr));
+	strlcpy(ifgr.ifgr_name, "wg", sizeof(ifgr.ifgr_name));
+
+	if (ioctl(s, SIOCGIFGMEMB, (caddr_t)&ifgr) == -1)
+		return errno;
+
+	len = ifgr.ifgr_len;
+	if ((ifgr.ifgr_groups = calloc(1, len)) == NULL)
+		return errno;
+	if (ioctl(s, SIOCGIFGMEMB, (caddr_t)&ifgr) == -1) {
+		ret = errno;
+		goto out;
+	}
+
+	for (ifg = ifgr.ifgr_groups; ifg && len > 0; ifg++) {
+		if ((ret = string_list_add(list, ifg->ifgrq_member)) < 0)
+			goto out;
+		len -= sizeof(struct ifg_req);
+	}
+
+out:
+	free(ifgr.ifgr_groups);
+	return ret;
+}
+
+static int kernel_get_device(struct wgdevice **device, const char *iface)
+{
+	struct wg_data_io wgdata;
+	struct wg_interface_io *wg_iface;
+	struct wg_peer_io *wg_peer;
+	struct wg_aip_io *wg_aip;
+
+	struct wgdevice *dev;
+	struct wgpeer *peer;
+	struct wgallowedip *aip;
+
+	size_t size;
+
+	getsock();
+
+	*device = NULL;
+
+	strlcpy(wgdata.wgd_name, iface, sizeof(wgdata.wgd_name));
+	wgdata.wgd_size = size = 0;
+	wgdata.wgd_mem = NULL;
+
+	if (ioctl(s, SIOCGWG, (caddr_t)&wgdata) == -1 &&
+	    (errno == ENOTTY || errno == EPERM))
+		return -errno;
+
+	while (size < wgdata.wgd_size) {
+		size = wgdata.wgd_size;
+		wgdata.wgd_mem = realloc(wgdata.wgd_mem, size);
+		if (ioctl(s, SIOCGWG, (caddr_t)&wgdata) == -1)
+			return -errno;
+	}
+
+	wg_iface = wgdata.wgd_mem;
+
+	if ((dev = calloc(1, sizeof(*dev))) == NULL)
+		return -errno;
+	strlcpy(dev->name, iface, sizeof(dev->name));
+
+	if (wg_iface->i_flags & WG_INTERFACE_HAS_RTABLE) {
+		dev->fwmark = wg_iface->i_rtable;
+		dev->flags |= WGDEVICE_HAS_FWMARK;
+	}
+
+	if (wg_iface->i_flags & WG_INTERFACE_HAS_PORT) {
+		dev->listen_port = ntohs(wg_iface->i_port);
+		dev->flags |= WGDEVICE_HAS_LISTEN_PORT;
+	}
+
+	if (wg_iface->i_flags & WG_INTERFACE_HAS_PUBLIC) {
+		memcpy(dev->public_key, wg_iface->i_public, WG_KEY_SIZE);
+		dev->flags |= WGDEVICE_HAS_PUBLIC_KEY;
+	}
+
+	if (wg_iface->i_flags & WG_INTERFACE_HAS_PRIVATE) {
+		memcpy(dev->private_key, wg_iface->i_private, WG_KEY_SIZE);
+		dev->flags |= WGDEVICE_HAS_PRIVATE_KEY;
+	}
+
+	for (wg_peer = wg_iface->i_peers; wg_peer != NULL; wg_peer = wg_peer->p_next) {
+		if ((peer = calloc(1, sizeof(*peer))) == NULL)
+			return -errno;
+
+		if (dev->first_peer == NULL)
+			dev->first_peer = peer;
+		else
+			dev->last_peer->next_peer = peer;
+		dev->last_peer = peer;
+
+		if (wg_peer->p_flags & WG_PEER_HAS_PUBLIC) {
+			memcpy(peer->public_key, wg_peer->p_public, WG_KEY_SIZE);
+			peer->flags |= WGPEER_HAS_PUBLIC_KEY;
+		}
+
+		if (wg_peer->p_flags & WG_PEER_HAS_PSK) {
+			memcpy(peer->preshared_key, wg_peer->p_psk, WG_KEY_SIZE);
+			peer->flags |= WGPEER_HAS_PRESHARED_KEY;
+		}
+
+		if (wg_peer->p_flags & WG_PEER_HAS_PKA) {
+			peer->persistent_keepalive_interval = wg_peer->p_pka;
+			peer->flags |= WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL;
+		}
+
+		if (wg_peer->p_flags & WG_PEER_HAS_SOCKADDR)
+			memcpy(&peer->endpoint.addr, &wg_peer->p_sa,
+			    wg_peer->p_sa.sa_len);
+
+		peer->rx_bytes = wg_peer->p_rxbytes;
+		peer->tx_bytes = wg_peer->p_txbytes;
+
+		peer->last_handshake_time.tv_sec = wg_peer->p_last_handshake.tv_sec;
+		peer->last_handshake_time.tv_nsec = wg_peer->p_last_handshake.tv_nsec;
+
+		for (wg_aip = wg_peer->p_aips; wg_aip != NULL; wg_aip = wg_aip->a_next) {
+			if ((aip = calloc(1, sizeof(*aip))) == NULL)
+				return -errno;
+
+			if (peer->first_allowedip == NULL)
+				peer->first_allowedip = aip;
+			else
+				peer->last_allowedip->next_allowedip = aip;
+			peer->last_allowedip = aip;
+
+			aip->family = wg_aip->a_af;
+			if (wg_aip->a_af == AF_INET) {
+				memcpy(&aip->ip4, &wg_aip->a_ipv4, sizeof(aip->ip4));
+				aip->cidr = wg_aip->a_mask;
+			} else if (wg_aip->a_af == AF_INET6) {
+				memcpy(&aip->ip6, &wg_aip->a_ipv6, sizeof(aip->ip6));
+				aip->cidr = wg_aip->a_mask;
+			}
+		}
+	}
+
+	*device = dev;
+	free(wgdata.wgd_mem);
+	return 0;
+}
+
+static int kernel_set_device(struct wgdevice *dev)
+{
+	struct wg_data_io wgdata;
+	struct wg_interface_io wg_iface;
+	struct wg_peer_io *wg_peer;
+	struct wg_aip_io *wg_aip;
+
+	struct wgpeer *peer;
+	struct wgallowedip *aip;
+
+	getsock();
+
+	strlcpy(wgdata.wgd_name, dev->name, sizeof(wgdata.wgd_name));
+	wgdata.wgd_mem = &wg_iface;
+
+	bzero(&wg_iface, sizeof(wg_iface));
+
+	if (dev->flags & WGDEVICE_HAS_PRIVATE_KEY) {
+		memcpy(wg_iface.i_private, dev->private_key, WG_KEY_SIZE);
+		wg_iface.i_flags |= WG_INTERFACE_HAS_PRIVATE;
+	}
+
+	if (dev->flags & WGDEVICE_HAS_LISTEN_PORT) {
+		wg_iface.i_port = htons(dev->listen_port);
+		wg_iface.i_flags |= WG_INTERFACE_HAS_PORT;
+	}
+
+	if (dev->flags & WGDEVICE_HAS_FWMARK) {
+		wg_iface.i_rtable = dev->fwmark;
+		wg_iface.i_flags |= WG_INTERFACE_HAS_RTABLE;
+	}
+
+	if (dev->flags & WGDEVICE_REPLACE_PEERS)
+		wg_iface.i_flags |= WG_INTERFACE_REPLACE_PEERS;
+
+	for_each_wgpeer(dev, peer) {
+		if ((wg_peer = calloc(1, sizeof(*wg_peer))) == NULL)
+			return -errno;
+
+		wg_peer->p_flags = WG_PEER_HAS_PUBLIC;
+		memcpy(wg_peer->p_public, peer->public_key, WG_KEY_SIZE);
+
+		if (peer->flags & WGPEER_HAS_PRESHARED_KEY) {
+			memcpy(wg_peer->p_psk, peer->preshared_key, WG_KEY_SIZE);
+			wg_peer->p_flags |= WG_PEER_HAS_PSK;
+		}
+
+		if (peer->flags & WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL) {
+			wg_peer->p_pka = peer->persistent_keepalive_interval;
+			wg_peer->p_flags |= WG_PEER_HAS_PKA;
+		}
+
+		if (peer->endpoint.addr.sa_family == AF_INET ||
+		    peer->endpoint.addr.sa_family == AF_INET6) {
+			memcpy(&wg_peer->p_sa, &peer->endpoint.addr, peer->endpoint.addr.sa_len);
+			wg_peer->p_flags |= WG_PEER_HAS_SOCKADDR;
+		}
+
+		if (peer->flags & WGPEER_REPLACE_ALLOWEDIPS)
+			wg_peer->p_flags |= WG_PEER_REPLACE_AIPS;
+
+		if (peer->flags & WGPEER_REMOVE_ME)
+			wg_peer->p_flags |= WG_PEER_REMOVE;
+
+		wg_peer->p_next = wg_iface.i_peers;
+		wg_iface.i_peers = wg_peer;
+
+		for_each_wgallowedip(peer, aip) {
+			if ((wg_aip = calloc(1, sizeof(*wg_aip))) == NULL)
+				return -errno;
+
+			wg_aip->a_af = aip->family;
+			wg_aip->a_mask = aip->cidr;
+
+			if (aip->family == AF_INET)
+				memcpy(&wg_aip->a_ipv4, &aip->ip4, sizeof(aip->ip4));
+			else if (aip->family == AF_INET6)
+				memcpy(&wg_aip->a_ipv6, &aip->ip6, sizeof(aip->ip6));
+			else
+				return -1;
+
+			wg_aip->a_next = wg_peer->p_aips;
+			wg_peer->p_aips = wg_aip;
+		}
+	}
+
+	if (ioctl(s, SIOCSWG, (caddr_t)&wgdata) == -1)
+		return -errno;
+
+	return 0;
+}
+#endif /* OpenBSD */
+
 /* first\0second\0third\0forth\0last\0\0 */
 char *ipc_list_devices(void)
 {
 	struct string_list list = { 0 };
 	int ret;
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__OpenBSD__)
 	ret = kernel_get_wireguard_interfaces(&list);
 	if (ret < 0)
 		goto cleanup;
@@ -948,7 +1207,7 @@ cleanup:
 
 int ipc_get_device(struct wgdevice **dev, const char *iface)
 {
-#ifdef __linux__
+#if defined(__linux__) || defined(__OpenBSD__)
 	if (userspace_has_wireguard_interface(iface))
 		return userspace_get_device(dev, iface);
 	return kernel_get_device(dev, iface);
@@ -959,7 +1218,7 @@ int ipc_get_device(struct wgdevice **dev, const char *iface)
 
 int ipc_set_device(struct wgdevice *dev)
 {
-#ifdef __linux__
+#if defined(__linux__) || defined(__OpenBSD__)
 	if (userspace_has_wireguard_interface(dev->name))
 		return userspace_set_device(dev);
 	return kernel_set_device(dev);

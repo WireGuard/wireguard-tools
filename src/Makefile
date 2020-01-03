@@ -68,10 +68,10 @@ endif
 
 ifneq ($(V),1)
 BUILT_IN_LINK.o := $(LINK.o)
-LINK.o = @echo "  LD      $$(pwd)/$@";
+LINK.o = @echo "  LD      $@";
 LINK.o += $(BUILT_IN_LINK.o)
 BUILT_IN_COMPILE.c := $(COMPILE.c)
-COMPILE.c = @echo "  CC      $$(pwd)/$@";
+COMPILE.c = @echo "  CC      $@";
 COMPILE.c += $(BUILT_IN_COMPILE.c)
 endif
 
@@ -79,7 +79,7 @@ wg: $(patsubst %.c,%.o,$(wildcard *.c))
 
 ifneq ($(V),1)
 clean:
-	@echo "  CLEAN   $$(pwd)/{wg,*.o,*.d}"
+	@echo "  CLEAN   {wg,*.o,*.d}"
 	@$(RM) wg *.o *.d
 else
 clean:

@@ -103,6 +103,8 @@ install: wg
 check: clean
 	scan-build --html-title=wireguard-tools -maxloop 100 --view --keep-going $(MAKE) wg
 
+all: wg
+.DEFAULT_GOAL: all
 .PHONY: clean install check
 
 -include *.d

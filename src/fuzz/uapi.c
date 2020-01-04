@@ -8,9 +8,9 @@
 static FILE *hacked_userspace_interface_file(const char *iface);
 #define stat(a, b) ({ return hacked_userspace_interface_file(iface); 0; })
 #define RUNSTATEDIR "/var/empty"
+#include "../curve25519.c"
 #undef __linux__
 #include "../ipc.c"
-#include "../curve25519.c"
 #include "../encoding.c"
 
 #include <stdint.h>

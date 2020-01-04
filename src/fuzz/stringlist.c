@@ -4,9 +4,9 @@
  */
 
 #define RUNSTATEDIR "/var/empty"
+#include "../curve25519.c"
 #undef __linux__
 #include "../ipc.c"
-#include "../curve25519.c"
 #include "../encoding.c"
 
 #include <stdint.h>

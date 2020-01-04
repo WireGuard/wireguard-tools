@@ -20,7 +20,7 @@ static FILE *hacked_userspace_interface_file(const char *iface);
 
 const char *__asan_default_options()
 {
-        return "verbosity=1";
+	return "verbosity=1";
 }
 
 union hackiface {

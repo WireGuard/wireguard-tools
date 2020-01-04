@@ -2,10 +2,10 @@
 #
 # Copyright (C) 2018-2020 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 
-all: config uapi
+all: config uapi stringlist
 
 CFLAGS ?= -O3 -march=native -g
-CFLAGS += -fsanitize=fuzzer -std=gnu11 -idirafter ../uapi
+CFLAGS += -fsanitize=fuzzer -fsanitize=address -std=gnu11 -idirafter ../uapi
 CC := clang
 
 config: config.c ../config.c ../encoding.c
@@ -14,7 +14,10 @@ config: config.c ../config.c ../encoding.c
 uapi: uapi.c ../ipc.c ../curve25519.c ../encoding.c
 	$(CC) $(CFLAGS) -o $@ $<
 
+stringlist: stringlist.c ../ipc.c ../curve25519.c ../encoding.c
+	$(CC) $(CFLAGS) -o $@ $<
+
 clean:
-	rm -f config uapi
+	rm -f config uapi stringlist
 
 .PHONY: all clean

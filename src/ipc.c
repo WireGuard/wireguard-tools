@@ -48,50 +48,34 @@
 #define SOCKET_BUFFER_SIZE 8192
 #endif
 
-struct inflatable_buffer {
+struct string_list {
 	char *buffer;
-	char *next;
-	bool good;
 	size_t len;
-	size_t pos;
+	size_t cap;
 };
 
-#define max(a, b) ((a) > (b) ? (a) : (b))
-static int add_next_to_inflatable_buffer(struct inflatable_buffer *buffer)
+static int string_list_add(struct string_list *list, const char *str)
 {
-	size_t len, expand_to;
-	char *new_buffer;
+	size_t len = strlen(str) + 1;
 
-	if (!buffer->good || !buffer->next) {
-		free(buffer->next);
-		buffer->good = false;
+	if (len == 1)
 		return 0;
-	}
 
-	len = strlen(buffer->next) + 1;
+	if (len >= list->cap - list->len) {
+		char *new_buffer;
+		size_t new_cap = list->cap * 2;
 
-	if (len == 1) {
-		free(buffer->next);
-		buffer->good = false;
-		return 0;
-	}
-
-	if (buffer->len - buffer->pos <= len) {
-		expand_to = max(buffer->len * 2, buffer->len + len + 1);
-		new_buffer = realloc(buffer->buffer, expand_to);
-		if (!new_buffer) {
-			free(buffer->next);
-			buffer->good = false;
+		if (new_cap <  list->len +len + 1)
+			new_cap = list->len + len + 1;
+		new_buffer = realloc(list->buffer, new_cap);
+		if (!new_buffer)
 			return -errno;
-		}
-		memset(&new_buffer[buffer->len], 0, expand_to - buffer->len);
-		buffer->buffer = new_buffer;
-		buffer->len = expand_to;
+		list->buffer = new_buffer;
+		list->cap = new_cap;
 	}
-	memcpy(&buffer->buffer[buffer->pos], buffer->next, len);
-	free(buffer->next);
-	buffer->good = false;
-	buffer->pos += len;
+	memcpy(list->buffer + list->len, str, len);
+	list->len += len;
+	list->buffer[list->len] = '\0';
 	return 0;
 }
 
@@ -167,7 +151,7 @@ static bool userspace_has_wireguard_interface(const char *iface)
 	return true;
 }
 
-static int userspace_get_wireguard_interfaces(struct inflatable_buffer *buffer)
+static int userspace_get_wireguard_interfaces(struct string_list *list)
 {
 	DIR *dir;
 	struct dirent *ent;
@@ -188,9 +172,7 @@ static int userspace_get_wireguard_interfaces(struct inflatable_buffer *buffer)
 		*end = '\0';
 		if (!userspace_has_wireguard_interface(ent->d_name))
 			continue;
-		buffer->next = strdup(ent->d_name);
-		buffer->good = true;
-		ret = add_next_to_inflatable_buffer(buffer);
+		ret = string_list_add(list, ent->d_name);
 		if (ret < 0)
 			goto out;
 	}
@@ -451,37 +433,42 @@ err:
 
 #ifdef __linux__
 
+struct interface {
+	const char *name;
+	bool is_wireguard;
+};
+
 static int parse_linkinfo(const struct nlattr *attr, void *data)
 {
-	struct inflatable_buffer *buffer = data;
+	struct interface *interface = data;
 
-	if (mnl_attr_get_type(attr) == IFLA_INFO_KIND && !strcmp("wireguard", mnl_attr_get_str(attr)))
-		buffer->good = true;
+	if (mnl_attr_get_type(attr) == IFLA_INFO_KIND && !strcmp(WG_GENL_NAME, mnl_attr_get_str(attr)))
+		interface->is_wireguard = true;
 	return MNL_CB_OK;
 }
 
 static int parse_infomsg(const struct nlattr *attr, void *data)
 {
-	struct inflatable_buffer *buffer = data;
+	struct interface *interface = data;
 
 	if (mnl_attr_get_type(attr) == IFLA_LINKINFO)
 		return mnl_attr_parse_nested(attr, parse_linkinfo, data);
 	else if (mnl_attr_get_type(attr) == IFLA_IFNAME)
-		buffer->next = strdup(mnl_attr_get_str(attr));
+		interface->name = mnl_attr_get_str(attr);
 	return MNL_CB_OK;
 }
 
 static int read_devices_cb(const struct nlmsghdr *nlh, void *data)
 {
-	struct inflatable_buffer *buffer = data;
+	struct string_list *list = data;
+	struct interface interface = { 0 };
 	int ret;
 
-	buffer->good = false;
-	buffer->next = NULL;
-	ret = mnl_attr_parse(nlh, sizeof(struct ifinfomsg), parse_infomsg, data);
+	ret = mnl_attr_parse(nlh, sizeof(struct ifinfomsg), parse_infomsg, &interface);
 	if (ret != MNL_CB_OK)
 		return ret;
-	ret = add_next_to_inflatable_buffer(buffer);
+	if (interface.name && interface.is_wireguard)
+		ret = string_list_add(list, interface.name);
 	if (ret < 0)
 		return ret;
 	if (nlh->nlmsg_type != NLMSG_DONE)
@@ -489,7 +476,7 @@ static int read_devices_cb(const struct nlmsghdr *nlh, void *data)
 	return MNL_CB_OK;
 }
 
-static int kernel_get_wireguard_interfaces(struct inflatable_buffer *buffer)
+static int kernel_get_wireguard_interfaces(struct string_list *list)
 {
 	struct mnl_socket *nl = NULL;
 	char *rtnl_buffer = NULL;
@@ -536,7 +523,7 @@ another:
 		ret = -errno;
 		goto cleanup;
 	}
-	if ((len = mnl_cb_run(rtnl_buffer, len, seq, portid, read_devices_cb, buffer)) < 0) {
+	if ((len = mnl_cb_run(rtnl_buffer, len, seq, portid, read_devices_cb, list)) < 0) {
 		/* Netlink returns NLM_F_DUMP_INTR if the set of all tunnels changed
 		 * during the dump. That's unfortunate, but is pretty common on busy
 		 * systems that are adding and removing tunnels all the time. Rather
@@ -940,30 +927,25 @@ out:
 /* first\0second\0third\0forth\0last\0\0 */
 char *ipc_list_devices(void)
 {
-	struct inflatable_buffer buffer = { .len = SOCKET_BUFFER_SIZE };
+	struct string_list list = { 0 };
 	int ret;
 
-	ret = -ENOMEM;
-	buffer.buffer = calloc(1, buffer.len);
-	if (!buffer.buffer)
-		goto cleanup;
-
 #ifdef __linux__
-	ret = kernel_get_wireguard_interfaces(&buffer);
+	ret = kernel_get_wireguard_interfaces(&list);
 	if (ret < 0)
 		goto cleanup;
 #endif
-	ret = userspace_get_wireguard_interfaces(&buffer);
+	ret = userspace_get_wireguard_interfaces(&list);
 	if (ret < 0)
 		goto cleanup;
 
 cleanup:
 	errno = -ret;
 	if (errno) {
-		free(buffer.buffer);
+		free(list.buffer);
 		return NULL;
 	}
-	return buffer.buffer;
+	return list.buffer ?: strdup("\0");
 }
 
 int ipc_get_device(struct wgdevice **dev, const char *iface)

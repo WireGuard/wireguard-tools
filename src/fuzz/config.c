@@ -18,7 +18,7 @@
 
 const char *__asan_default_options()
 {
-        return "verbosity=1";
+	return "verbosity=1";
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t len)

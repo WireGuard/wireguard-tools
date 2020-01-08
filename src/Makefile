@@ -46,9 +46,9 @@ CFLAGS += -DRUNSTATEDIR="\"$(RUNSTATEDIR)\""
 ifeq ($(DEBUG),yes)
 CFLAGS += -g
 endif
-GIT_VERSION := $(shell GIT_CEILING_DIRECTORIES="$(PWD)/../.." git describe --dirty 2>/dev/null)
-ifneq ($(GIT_VERSION),)
-CFLAGS += -D'WIREGUARD_TOOLS_VERSION="$(GIT_VERSION:v%=%)"'
+WIREGUARD_TOOLS_VERSION = $(patsubst v%,%,$(shell GIT_CEILING_DIRECTORIES="$(PWD)/../.." git describe --dirty 2>/dev/null))
+ifneq ($(WIREGUARD_TOOLS_VERSION),)
+CFLAGS += -D'WIREGUARD_TOOLS_VERSION="$(WIREGUARD_TOOLS_VERSION)"'
 endif
 ifeq ($(PLATFORM),linux)
 LIBMNL_CFLAGS := $(shell $(PKG_CONFIG) --cflags libmnl 2>/dev/null)

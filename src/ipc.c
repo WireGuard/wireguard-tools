@@ -881,11 +881,12 @@ static void coalesce_peers(struct wgdevice *device)
 
 static int kernel_get_device(struct wgdevice **device, const char *iface)
 {
-	int ret = 0;
+	int ret;
 	struct nlmsghdr *nlh;
 	struct mnlg_socket *nlg;
 
 try_again:
+	ret = 0;
 	*device = calloc(1, sizeof(**device));
 	if (!*device)
 		return -errno;

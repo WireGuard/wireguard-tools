@@ -75,7 +75,7 @@ COMPILE.c = @echo "  CC      $@";
 COMPILE.c += $(BUILT_IN_COMPILE.c)
 endif
 
-wg: $(patsubst %.c,%.o,$(wildcard *.c))
+wg: $(sort $(patsubst %.c,%.o,$(wildcard *.c)))
 
 ifneq ($(V),1)
 clean:

@@ -11,7 +11,7 @@ struct def {
 extern const struct def defs[];
 
 #ifdef __KERNEL__
-#include "../../../src/noise.h"
+#include "../drivers/net/wireguard/noise.h"
 
 const struct def defs[] = {
 	{ "LOCAL_STATIC_PRIVATE_KEY", offsetof(struct noise_static_identity, static_private), offsetof(struct noise_handshake, static_identity) },

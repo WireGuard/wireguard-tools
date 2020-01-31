@@ -23,10 +23,5 @@ clean:
 
 .PHONY: clean
 else
-config-m := config.o
-oldsrc := $(src)
-src := $(src)/../../../src
-include $(src)/compat/Kbuild.include
-include $(src)/crypto/Kbuild.include
-src := $(oldsrc)
+obj-m := config.o
 endif

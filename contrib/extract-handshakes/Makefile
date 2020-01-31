@@ -20,10 +20,5 @@ clean:
 
 .PHONY: clean
 else
-offset-finder-m := offset-finder.o
-oldsrc := $(src)
-src := $(src)/../../../src
-include $(src)/compat/Kbuild.include
-include $(src)/crypto/Kbuild.include
-src := $(oldsrc)
+obj-m := offset-finder.o
 endif

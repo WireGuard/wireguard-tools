@@ -785,6 +785,7 @@ static uid_t *get_uid_list(const char *selected_applications)
 static void set_users(unsigned int netid, const char *excluded_applications)
 {
 	_cleanup_free_ uid_t *excluded_uids = get_uid_list(excluded_applications);
+	unsigned int args_per_command = 0;
 	_cleanup_free_ char *ranges = NULL;
 	char range[22];
 	uid_t start;
@@ -797,13 +798,19 @@ static void set_users(unsigned int netid, const char *excluded_applications)
 		else
 			snprintf(range, sizeof(range), "%u-%u", start, *excluded_uids - 1);
 		ranges = concat_and_free(ranges, " ", range);
+		if (++args_per_command % 18 == 0) {
+			cndc("network users add %u %s", netid, ranges);
+			free(ranges);
+			ranges = NULL;
+		}
 	}
 	if (start < 99999) {
 		snprintf(range, sizeof(range), "%u-99999", start);
 		ranges = concat_and_free(ranges, " ", range);
 	}
 
-	cndc("network users add %u %s", netid, ranges);
+	if (ranges)
+		cndc("network users add %u %s", netid, ranges);
 }
 
 static void set_dnses(unsigned int netid, const char *dnses)

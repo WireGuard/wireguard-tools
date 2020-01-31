@@ -212,6 +212,15 @@ are thus ignored.
 .br
     AllowedIPs = 10.10.10.230/32
 
+.SH DEBUGGING INFORMATION
+Sometimes it is useful to have information on the current runtime state of a tunnel. When using the Linux kernel module on a kernel that supports dynamic debugging, debugging information can be written into
+.BR dmesg (1)
+by running as root:
+
+\fB    # modprobe wireguard && echo module wireguard +p > /sys/kernel/debug/dynamic_debug/control\fP
+
+On userspace implementations, it is customary to set the \fILOG_LEVEL\fP environment variable to \fIdebug\fP.
+
 .SH ENVIRONMENT VARIABLES
 .TP
 .I WG_COLOR_MODE

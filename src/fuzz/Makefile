@@ -20,13 +20,13 @@ stringlist: stringlist.c ../ipc.c ../curve25519.c ../encoding.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 cmd: cmd.c $(wildcard ../*.c)
-	$(CC) $(CFLAGS) -D'RUNSTATEDIR="/var/empty"' -D'main(a,b)=wg_main(a,b)' -o $@ $^ -lmnl
+	$(CC) $(CFLAGS) -D'RUNSTATEDIR="/var/empty"' -D'main(a,b)=wg_main(a,b)' -o $@ $^
 
-set: set.c ../set.c ../ipc.c ../encoding.c ../mnlg.c ../curve25519.c ../config.c
-	$(CC) $(CFLAGS) -o $@ $< -lmnl
+set: set.c ../set.c ../ipc.c ../encoding.c ../curve25519.c ../config.c
+	$(CC) $(CFLAGS) -o $@ $<
 
-setconf: setconf.c ../setconf.c ../ipc.c ../encoding.c ../mnlg.c ../curve25519.c ../config.c
-	$(CC) $(CFLAGS) -o $@ $< -lmnl
+setconf: setconf.c ../setconf.c ../ipc.c ../encoding.c ../curve25519.c ../config.c
+	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
 	$(RM) $(FUZZERS)

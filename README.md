@@ -14,9 +14,7 @@ Android.
     $ cd src
     $ make
 
-On Linux, [`libmnl`](https://netfilter.org/projects/libmnl/index.html) is
-required. On Windows, the [MinGW](http://www.mingw.org/) compiler is required.
-On other platforms, only a sane libc is required.
+There are no dependencies other than a good C compiler and a sane libc.
 
 ## Installing
 

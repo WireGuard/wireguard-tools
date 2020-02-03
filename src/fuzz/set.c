@@ -15,7 +15,6 @@
 static FILE *hacked_fopen(const char *pathname, const char *mode);
 #define fopen hacked_fopen
 #include "../config.c"
-#include "../mnlg.c"
 #include "../set.c"
 #undef stderr
 

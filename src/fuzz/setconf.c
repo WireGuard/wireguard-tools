@@ -13,7 +13,6 @@
 #undef parse_allowedips
 #include "../encoding.c"
 #include "../config.c"
-#include "../mnlg.c"
 static FILE *hacked_fopen(const char *pathname, const char *mode);
 #define fopen hacked_fopen
 #include "../setconf.c"

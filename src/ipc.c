@@ -4,13 +4,10 @@
  */
 
 #ifdef __linux__
-#include <libmnl/libmnl.h>
 #include <linux/if_link.h>
-#include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-#include <linux/genetlink.h>
 #include <linux/wireguard.h>
-#include "mnlg.h"
+#include "netlink.h"
 #endif
 #include <netinet/in.h>
 #include <sys/socket.h>

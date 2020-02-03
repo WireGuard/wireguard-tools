@@ -50,12 +50,6 @@ WIREGUARD_TOOLS_VERSION = $(patsubst v%,%,$(shell GIT_CEILING_DIRECTORIES="$(PWD
 ifneq ($(WIREGUARD_TOOLS_VERSION),)
 CFLAGS += -D'WIREGUARD_TOOLS_VERSION="$(WIREGUARD_TOOLS_VERSION)"'
 endif
-ifeq ($(PLATFORM),linux)
-LIBMNL_CFLAGS := $(shell $(PKG_CONFIG) --cflags libmnl 2>/dev/null)
-LIBMNL_LDLIBS := $(shell $(PKG_CONFIG) --libs libmnl 2>/dev/null || echo -lmnl)
-CFLAGS += $(LIBMNL_CFLAGS)
-LDLIBS += $(LIBMNL_LDLIBS)
-endif
 ifeq ($(PLATFORM),haiku)
 LDLIBS += -lnetwork -lbsd
 endif

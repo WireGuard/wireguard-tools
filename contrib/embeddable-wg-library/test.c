@@ -27,8 +27,11 @@ void list_devices(void)
 			perror("Unable to get device");
 			continue;
 		}
-		wg_key_to_base64(key, device->public_key);
-		printf("%s has public key %s\n", device_name, key);
+		if (device->flags & WGDEVICE_HAS_PUBLIC_KEY) {
+			wg_key_to_base64(key, device->public_key);
+			printf("%s has public key %s\n", device_name, key);
+		} else
+			printf("%s has no public key\n", device_name);
 		wg_for_each_peer(device, peer) {
 			wg_key_to_base64(key, peer->public_key);
 			printf(" - peer %s\n", key);

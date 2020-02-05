@@ -20,7 +20,6 @@
 #include <linux/genetlink.h>
 
 #define MNL_SOCKET_AUTOPID 0
-#define MNL_SOCKET_BUFFER_SIZE (sysconf(_SC_PAGESIZE) < 8192L ? sysconf(_SC_PAGESIZE) : 8192L)
 #define MNL_ALIGNTO 4
 #define MNL_ALIGN(len) (((len)+MNL_ALIGNTO-1) & ~(MNL_ALIGNTO-1))
 #define MNL_NLMSG_HDRLEN MNL_ALIGN(sizeof(struct nlmsghdr))
@@ -67,6 +66,18 @@ typedef int (*mnl_cb_t)(const struct nlmsghdr *nlh, void *data);
 #ifndef MNL_ARRAY_SIZE
 #define MNL_ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
 #endif
+
+static size_t mnl_ideal_socket_buffer_size(void)
+{
+	static size_t size = 0;
+
+	if (size)
+		return size;
+	size = (size_t)sysconf(_SC_PAGESIZE);
+	if (size > 8192)
+		size = 8192;
+	return size;
+}
 
 static size_t mnl_nlmsg_size(size_t len)
 {
@@ -680,7 +691,7 @@ static int mnlg_socket_recv_run(struct mnlg_socket *nlg, mnl_cb_t data_cb, void 
 
 	do {
 		err = mnl_socket_recvfrom(nlg->nl, nlg->buf,
-					  MNL_SOCKET_BUFFER_SIZE);
+					  mnl_ideal_socket_buffer_size());
 		if (err <= 0)
 			break;
 		err = mnl_cb_run2(nlg->buf, err, nlg->seq, nlg->portid,
@@ -728,7 +739,7 @@ static struct mnlg_socket *mnlg_socket_open(const char *family_name, uint8_t ver
 		return NULL;
 
 	err = -ENOMEM;
-	nlg->buf = malloc(MNL_SOCKET_BUFFER_SIZE);
+	nlg->buf = malloc(mnl_ideal_socket_buffer_size());
 	if (!nlg->buf)
 		goto err_buf_alloc;
 

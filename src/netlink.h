@@ -737,6 +737,7 @@ static struct mnlg_socket *mnlg_socket_open(const char *family_name, uint8_t ver
 	nlg = malloc(sizeof(*nlg));
 	if (!nlg)
 		return NULL;
+	nlg->id = 0;
 
 	err = -ENOMEM;
 	nlg->buf = malloc(mnl_ideal_socket_buffer_size());

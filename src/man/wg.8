@@ -40,7 +40,7 @@ Sub-commands that take an INTERFACE must be passed a WireGuard interface.
 Shows current WireGuard configuration and runtime information of specified \fI<interface>\fP.
 If no \fI<interface>\fP is specified, \fI<interface>\fP defaults to \fIall\fP.
 If \fIinterfaces\fP is specified, prints a list of all WireGuard interfaces,
-one per line, and quit. If no options are given after the interface
+one per line, and quits. If no options are given after the interface
 specification, then prints a list of all attributes in a visually pleasing way
 meant for the terminal. Otherwise, prints specified information grouped by
 newlines and tabs, meant to be used in scripts. For this script-friendly display,
@@ -61,7 +61,7 @@ Sets configuration values for the specified \fI<interface>\fP. Multiple
 for a peer, that peer is removed, not configured. If \fIlisten-port\fP
 is not specified, or set to 0, the port will be chosen randomly when the
 interface comes up. Both \fIprivate-key\fP and \fIpreshared-key\fP must
-be a files, because command line arguments are not considered private on
+be files, because command line arguments are not considered private on
 most systems but if you are using
 .BR bash (1),
 you may safely pass in a string by specifying as \fIprivate-key\fP or

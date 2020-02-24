@@ -99,7 +99,8 @@ is expanded to \fIINTERFACE\fP. Each one may be specified multiple times, in whi
 the commands are executed in order.
 .IP \(bu
 SaveConfig \(em if set to `true', the configuration is saved from the current state of the
-interface upon shutdown.
+interface upon shutdown. Any changes made to the configuration file before the
+interface is removed will therefore be overwritten.
 
 .P
 Recommended \fIINTERFACE\fP names include `wg0' or `wgvpn0' or even `wgmgmtlan0'.

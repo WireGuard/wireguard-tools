@@ -51,6 +51,7 @@ static const char *colormap[] = {
 	[HighlightDelimiter] = TERMINAL_FG_CYAN,
 #ifndef MOBILE_WGQUICK_SUBSET
 	[HighlightTable] = TERMINAL_FG_BLUE,
+	[HighlightNetNS] = TERMINAL_FG_BLUE,
 	[HighlightFwMark] = TERMINAL_FG_BLUE,
 	[HighlightSaveConfig] = TERMINAL_FG_BLUE,
 	[HighlightCmd] = TERMINAL_FG_WHITE,

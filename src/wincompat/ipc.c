@@ -115,6 +115,7 @@ err:
 
 static int userspace_get_wireguard_interfaces(struct string_list *list)
 {
+	static const char prefix[] = "ProtectedPrefix\\Administrators\\WireGuard\\";
 	WIN32_FIND_DATA find_data;
 	HANDLE find_handle;
 	int ret = 0;
@@ -123,9 +124,9 @@ static int userspace_get_wireguard_interfaces(struct string_list *list)
 	if (find_handle == INVALID_HANDLE_VALUE)
 		return -GetLastError();
 	do {
-		if (strncmp("WireGuard\\", find_data.cFileName, 10))
+		if (strncmp(prefix, find_data.cFileName, strlen(prefix)))
 			continue;
-		ret = string_list_add(list, find_data.cFileName + 10);
+		ret = string_list_add(list, find_data.cFileName + strlen(prefix));
 		if (ret < 0)
 			goto out;
 	} while (FindNextFile(find_handle, &find_data));

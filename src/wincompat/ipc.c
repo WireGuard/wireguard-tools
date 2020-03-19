@@ -113,7 +113,7 @@ err:
 	return NULL;
 }
 
-static int userspace_get_wireguard_interfaces(struct inflatable_buffer *buffer)
+static int userspace_get_wireguard_interfaces(struct string_list *list)
 {
 	WIN32_FIND_DATA find_data;
 	HANDLE find_handle;
@@ -125,9 +125,7 @@ static int userspace_get_wireguard_interfaces(struct inflatable_buffer *buffer)
 	do {
 		if (strncmp("WireGuard\\", find_data.cFileName, 10))
 			continue;
-		buffer->next = strdup(find_data.cFileName + 10);
-		buffer->good = true;
-		ret = add_next_to_inflatable_buffer(buffer);
+		ret = string_list_add(list, find_data.cFileName + 10);
 		if (ret < 0)
 			goto out;
 	} while (FindNextFile(find_handle, &find_data));

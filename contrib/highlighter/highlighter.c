@@ -62,10 +62,31 @@ static bool is_valid_key(string_span_t s)
 	if (s.len != 44 || s.s[43] != '=')
 		return false;
 
-	for (size_t i = 0; i < 43; ++i) {
+	for (size_t i = 0; i < 42; ++i) {
 		if (!is_decimal(s.s[i]) && !is_alphabet(s.s[i]) &&
 		    s.s[i] != '/' && s.s[i] != '+')
 			return false;
+	}
+	switch (s.s[42]) {
+	case 'A':
+	case 'E':
+	case 'I':
+	case 'M':
+	case 'Q':
+	case 'U':
+	case 'Y':
+	case 'c':
+	case 'g':
+	case 'k':
+	case 'o':
+	case 's':
+	case 'w':
+	case '4':
+	case '8':
+	case '0':
+		break;
+	default:
+		return false;
 	}
 	return true;
 }

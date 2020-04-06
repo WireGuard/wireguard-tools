@@ -782,31 +782,49 @@ static uid_t *get_uid_list(const char *selected_applications)
 	return uid_list;
 }
 
-static void set_users(unsigned int netid, const char *excluded_applications)
+static void set_users(unsigned int netid, const char *excluded_applications, const char *included_applications)
 {
-	_cleanup_free_ uid_t *excluded_uids = get_uid_list(excluded_applications);
+	_cleanup_free_ uid_t *uids = NULL;
 	unsigned int args_per_command = 0;
 	_cleanup_free_ char *ranges = NULL;
 	char range[22];
 	uid_t start;
 
-	for (start = 0; *excluded_uids; start = *excluded_uids + 1, ++excluded_uids) {
-		if (start > *excluded_uids - 1)
-			continue;
-		else if (start == *excluded_uids - 1)
-			snprintf(range, sizeof(range), "%u", start);
-		else
-			snprintf(range, sizeof(range), "%u-%u", start, *excluded_uids - 1);
-		ranges = concat_and_free(ranges, " ", range);
-		if (++args_per_command % 18 == 0) {
-			cndc("network users add %u %s", netid, ranges);
-			free(ranges);
-			ranges = NULL;
-		}
+	if (excluded_applications && included_applications) {
+		fprintf(stderr, "Error: only one of ExcludedApplications and IncludedApplications may be specified, but not both\n");
+		exit(EEXIST);
 	}
-	if (start < 99999) {
-		snprintf(range, sizeof(range), "%u-99999", start);
-		ranges = concat_and_free(ranges, " ", range);
+
+	if (excluded_applications || !included_applications) {
+		uids = get_uid_list(excluded_applications);
+		for (start = 0; *uids; start = *uids + 1, ++uids) {
+			if (start > *uids - 1)
+				continue;
+			else if (start == *uids - 1)
+				snprintf(range, sizeof(range), "%u", start);
+			else
+				snprintf(range, sizeof(range), "%u-%u", start, *uids - 1);
+			ranges = concat_and_free(ranges, " ", range);
+			if (++args_per_command % 18 == 0) {
+				cndc("network users add %u %s", netid, ranges);
+				free(ranges);
+				ranges = NULL;
+			}
+		}
+		if (start < 99999) {
+			snprintf(range, sizeof(range), "%u-99999", start);
+			ranges = concat_and_free(ranges, " ", range);
+		}
+	} else {
+		for (uids = get_uid_list(included_applications); *uids; ++uids) {
+			snprintf(range, sizeof(range), "%u", *uids);
+			ranges = concat_and_free(ranges, " ", range);
+			if (++args_per_command % 18 == 0) {
+				cndc("network users add %u %s", netid, ranges);
+				free(ranges);
+				ranges = NULL;
+			}
+		}
 	}
 
 	if (ranges)
@@ -1063,7 +1081,8 @@ static void cmd_usage(const char *program)
 		"    IP addresses (with an optional CIDR mask) to be set for the interface.\n"
 		"  - MTU: an optional MTU for the interface; if unspecified, auto-calculated.\n"
 		"  - DNS: an optional DNS server to use while the device is up.\n"
-		"  - ExcludedApplications: optional applications to exclude from the tunnel.\n\n"
+		"  - ExcludedApplications: optional blacklist of applications to exclude from the tunnel.\n\n"
+		"  - IncludedApplications: optional whitelist of applications to include in the tunnel.\n\n"
 		"  See wg-quick(8) for more info and examples.\n");
 }
 
@@ -1077,7 +1096,7 @@ static void cmd_up_cleanup(void)
 	free(cleanup_iface);
 }
 
-static void cmd_up(const char *iface, const char *config, unsigned int mtu, const char *addrs, const char *dnses, const char *excluded_applications)
+static void cmd_up(const char *iface, const char *config, unsigned int mtu, const char *addrs, const char *dnses, const char *excluded_applications, const char *included_applications)
 {
 	DEFINE_CMD(c);
 	unsigned int netid = 0;
@@ -1099,7 +1118,7 @@ static void cmd_up(const char *iface, const char *config, unsigned int mtu, cons
 	set_dnses(netid, dnses);
 	set_routes(iface, netid);
 	set_mtu(iface, mtu);
-	set_users(netid, excluded_applications);
+	set_users(netid, excluded_applications, included_applications);
 	broadcast_change();
 
 	free(cleanup_iface);
@@ -1131,7 +1150,7 @@ static void cmd_down(const char *iface)
 	exit(EXIT_SUCCESS);
 }
 
-static void parse_options(char **iface, char **config, unsigned int *mtu, char **addrs, char **dnses, char **excluded_applications, const char *arg)
+static void parse_options(char **iface, char **config, unsigned int *mtu, char **addrs, char **dnses, char **excluded_applications, char **included_applications, const char *arg)
 {
 	_cleanup_fclose_ FILE *file = NULL;
 	_cleanup_free_ char *line = NULL;
@@ -1215,6 +1234,9 @@ static void parse_options(char **iface, char **config, unsigned int *mtu, char *
 			} else if (!strncasecmp(clean, "ExcludedApplications=", 21) && j > 4) {
 				*excluded_applications = concat_and_free(*excluded_applications, ",", clean + 21);
 				continue;
+			} else if (!strncasecmp(clean, "IncludedApplications=", 21) && j > 4) {
+				*included_applications = concat_and_free(*included_applications, ",", clean + 21);
+				continue;
 			} else if (!strncasecmp(clean, "MTU=", 4) && j > 4) {
 				*mtu = atoi(clean + 4);
 				continue;
@@ -1240,17 +1262,18 @@ int main(int argc, char *argv[])
 	_cleanup_free_ char *addrs = NULL;
 	_cleanup_free_ char *dnses = NULL;
 	_cleanup_free_ char *excluded_applications = NULL;
+	_cleanup_free_ char *included_applications = NULL;
 	unsigned int mtu;
 
 	if (argc == 2 && (!strcmp(argv[1], "help") || !strcmp(argv[1], "--help") || !strcmp(argv[1], "-h")))
 		cmd_usage(argv[0]);
 	else if (argc == 3 && !strcmp(argv[1], "up")) {
 		auto_su(argc, argv);
-		parse_options(&iface, &config, &mtu, &addrs, &dnses, &excluded_applications, argv[2]);
-		cmd_up(iface, config, mtu, addrs, dnses, excluded_applications);
+		parse_options(&iface, &config, &mtu, &addrs, &dnses, &excluded_applications, &included_applications, argv[2]);
+		cmd_up(iface, config, mtu, addrs, dnses, excluded_applications, included_applications);
 	} else if (argc == 3 && !strcmp(argv[1], "down")) {
 		auto_su(argc, argv);
-		parse_options(&iface, &config, &mtu, &addrs, &dnses, &excluded_applications, argv[2]);
+		parse_options(&iface, &config, &mtu, &addrs, &dnses, &excluded_applications, &included_applications, argv[2]);
 		cmd_down(iface);
 	} else {
 		cmd_usage(argv[0]);

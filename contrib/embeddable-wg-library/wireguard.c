@@ -1363,12 +1363,16 @@ static int parse_device(const struct nlattr *attr, void *data)
 		}
 		break;
 	case WGDEVICE_A_LISTEN_PORT:
-		if (!mnl_attr_validate(attr, MNL_TYPE_U16))
+		if (!mnl_attr_validate(attr, MNL_TYPE_U16)) {
 			device->listen_port = mnl_attr_get_u16(attr);
+			device->flags |= WGDEVICE_HAS_LISTEN_PORT;
+		}
 		break;
 	case WGDEVICE_A_FWMARK:
-		if (!mnl_attr_validate(attr, MNL_TYPE_U32))
+		if (!mnl_attr_validate(attr, MNL_TYPE_U32)) {
 			device->fwmark = mnl_attr_get_u32(attr);
+			device->flags |= WGDEVICE_HAS_FWMARK;
+		}
 		break;
 	case WGDEVICE_A_PEERS:
 		return mnl_attr_parse_nested(attr, parse_peers, device);

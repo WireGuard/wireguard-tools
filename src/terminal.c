@@ -12,7 +12,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-static bool color_mode(FILE *file)
+static bool color_mode(void)
 {
 	static int mode = -1;
 	const char *var;
@@ -25,17 +25,17 @@ static bool color_mode(FILE *file)
 	else if (var && !strcmp(var, "never"))
 		mode = false;
 	else
-		return isatty(fileno(file));
+		mode = isatty(fileno(stdout));
 	return mode;
 }
 
-static void filter_ansi(FILE *file, const char *fmt, va_list args)
+static void filter_ansi(const char *fmt, va_list args)
 {
 	char *str = NULL;
 	size_t len, i, j;
 
-	if (color_mode(file)) {
-		vfprintf(file, fmt, args);
+	if (color_mode()) {
+		vfprintf(stdout, fmt, args);
 		return;
 	}
 
@@ -55,7 +55,7 @@ static void filter_ansi(FILE *file, const char *fmt, va_list args)
 		}
 	}
 	for (i = 0; i < len; i = j) {
-		fputs(&str[i], file);
+		fputs(&str[i], stdout);
 		for (j = i + strlen(&str[i]); j < len; ++j) {
 			if (str[j] != '\0')
 				break;
@@ -70,15 +70,6 @@ void terminal_printf(const char *fmt, ...)
 	va_list args;
 
 	va_start(args, fmt);
-	filter_ansi(stdout, fmt, args);
-	va_end(args);
-}
-
-void terminal_fprintf(FILE *file, const char *fmt, ...)
-{
-	va_list args;
-
-	va_start(args, fmt);
-	filter_ansi(file, fmt, args);
+	filter_ansi(fmt, args);
 	va_end(args);
 }

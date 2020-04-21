@@ -47,6 +47,5 @@
 #define TERMINAL_CLEAR_ALL	"\x1b[2J"
 
 void terminal_printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
-void terminal_fprintf(FILE *file, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
 #endif

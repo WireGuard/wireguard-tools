@@ -837,37 +837,49 @@ static void set_dnses(unsigned int netid, const char *dnses)
 	if (len > (1<<16))
 		return;
 	_cleanup_free_ char *mutable = xstrdup(dnses);
-	_cleanup_free_ char *shell_arglist = xmalloc(len * 4 + 1);
-	_cleanup_free_ char *function_arglist = xmalloc(len * 4 + 1);
+	_cleanup_free_ char *dns_shell_arglist = xmalloc(len * 4 + 1);
+	_cleanup_free_ char *dns_search_shell_arglist = xmalloc(len * 4 + 1);
+	_cleanup_free_ char *dns_function_arglist = xmalloc(len * 4 + 1);
+	_cleanup_free_ char *dns_search_function_arglist = xmalloc(len * 4 + 1);
 	_cleanup_free_ char *arg = xmalloc(len + 4);
 	_cleanup_free_ char **dns_list = NULL;
+	_cleanup_free_ char **dns_search_list = NULL;
 	_cleanup_binder_ AIBinder *handle = NULL;
-	size_t dns_list_size = 0;
+	_cleanup_regfree_ regex_t regex_ipnothost = { 0 };
+	size_t dns_list_size = 0, dns_search_list_size = 0;
+	bool is_ip;
 
 	if (!len)
 		return;
+
+	xregcomp(&regex_ipnothost, "^[a-zA-Z0-9_=+.-]{1,15}$", REG_EXTENDED | REG_NOSUB);
 	for (char *dns = strtok(mutable, ", \t\n"); dns; dns = strtok(NULL, ", \t\n")) {
 		if (strchr(dns, '\'') || strchr(dns, '\\'))
 			continue;
-		++dns_list_size;
+		++*(!regexec(&regex_ipnothost, dns, 0, NULL, 0) ? &dns_list_size : &dns_search_list_size);
 	}
 	if (!dns_list_size)
 		return;
 	dns_list = xcalloc(dns_list_size + 1, sizeof(*dns_list));
+	dns_search_list = xcalloc(dns_search_list_size + 1, sizeof(*dns_search_list));
 	free(mutable);
 	mutable = xstrdup(dnses);
 
-	shell_arglist[0] = '\0';
-	function_arglist[0] = '\0';
+	dns_shell_arglist[0] = '\0';
+	dns_search_shell_arglist[0] = '\0';
+	dns_function_arglist[0] = '\0';
+	dns_search_function_arglist[0] = '\0';
 	dns_list_size = 0;
+	dns_search_list_size = 0;
 	for (char *dns = strtok(mutable, ", \t\n"); dns; dns = strtok(NULL, ", \t\n")) {
 		if (strchr(dns, '\'') || strchr(dns, '\\'))
 			continue;
+		is_ip = !regexec(&regex_ipnothost, dns, 0, NULL, 0);
 		snprintf(arg, len + 3, "'%s' ", dns);
-		strncat(shell_arglist, arg, len * 4 - 1);
-		snprintf(arg, len + 2, function_arglist[0] == '\0' ? "%s" : ", %s", dns);
-		strncat(function_arglist, arg, len * 4 - 1);
-		dns_list[dns_list_size++] = dns;
+		strncat(is_ip ? dns_shell_arglist : dns_search_shell_arglist, arg, len * 4 - 1);
+		snprintf(arg, len + 2, (is_ip ? dns_function_arglist[0] : dns_search_function_arglist[0]) == '\0' ? "%s" : ", %s", dns);
+		strncat(is_ip ? dns_function_arglist : dns_search_function_arglist, arg, len * 4 - 1);
+		*(is_ip ? &dns_list[dns_list_size++] : &dns_search_list[dns_search_list_size++]) = dns;
 	}
 
 	if ((handle = dnsresolver_get_handle())) {
@@ -889,15 +901,16 @@ static void set_dnses(unsigned int netid, const char *dnses)
 			.base_timeout_msec = DNSRESOLVER_BASE_TIMEOUT,
 			.retry_count = DNSRESOLVER_RETRY_COUNT,
 			.servers = dns_list,
-			.domains = (char *[]){NULL},
+			.domains = dns_search_list,
 			.tls_name = "",
 			.tls_servers = (char *[]){NULL},
 			.tls_fingerprints = (char *[]){NULL}
 		};
 
-		printf("[#] <binder>::dnsResolver->setResolverConfiguration(%u, [%s], [], %d, %d, %d, %d, %d, %d, [], [])\n",
-		       netid, function_arglist, DNSRESOLVER_SAMPLE_VALIDITY, DNSRESOLVER_SUCCESS_THRESHOLD,
-		       DNSRESOLVER_MIN_SAMPLES, DNSRESOLVER_MAX_SAMPLES, DNSRESOLVER_BASE_TIMEOUT, DNSRESOLVER_RETRY_COUNT);
+		printf("[#] <binder>::dnsResolver->setResolverConfiguration(%u, [%s], [%s], %d, %d, %d, %d, %d, %d, [], [])\n",
+		       netid, dns_function_arglist, dns_search_function_arglist, DNSRESOLVER_SAMPLE_VALIDITY,
+		       DNSRESOLVER_SUCCESS_THRESHOLD, DNSRESOLVER_MIN_SAMPLES, DNSRESOLVER_MAX_SAMPLES,
+		       DNSRESOLVER_BASE_TIMEOUT, DNSRESOLVER_RETRY_COUNT);
 		status = dnsresolver_set_resolver_configuration(handle, &params);
 
 		if (status != 0) {
@@ -905,7 +918,7 @@ static void set_dnses(unsigned int netid, const char *dnses)
 			exit(ENONET);
 		}
 	} else
-		cndc("resolver setnetdns %u '' %s", netid, shell_arglist);
+		cndc("resolver setnetdns %u '%s' %s", netid, dns_search_shell_arglist, dns_shell_arglist);
 }
 
 static void add_addr(const char *iface, const char *addr)

@@ -2,7 +2,9 @@ set_dns() {
 	[[ ${#DNS[@]} -gt 0 ]] || return 0
 
 	if [[ $(resolvconf --version 2>/dev/null) == openresolv\ * ]]; then
-		printf 'nameserver %s\n' "${DNS[@]}" | cmd resolvconf -a "$INTERFACE" -m 0 -x
+		{ printf 'nameserver %s\n' "${DNS[@]}"
+		  [[ ${#DNS_SEARCH[@]} -eq 0 ]] || printf 'search %s\n' "${DNS_SEARCH[*]}"
+		} | cmd resolvconf -a "$INTERFACE" -m 0 -x
 	else
 		echo "[#] mount \`${DNS[*]}' /etc/resolv.conf" >&2
 		[[ -e /etc/resolv.conf ]] || touch /etc/resolv.conf
@@ -15,6 +17,7 @@ set_dns() {
 
 		_EOF
 		printf 'nameserver %s\n' "${DNS[@]}"
+		[[ ${#DNS_SEARCH[@]} -eq 0 ]] || printf 'search %s\n' "${DNS_SEARCH[*]}"
 		} | unshare -m --propagation shared bash -c "$(cat <<-_EOF
 			set -e
 			context="\$(stat -c %C /etc/resolv.conf 2>/dev/null)" || unset context

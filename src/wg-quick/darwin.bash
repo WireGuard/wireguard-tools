@@ -18,6 +18,7 @@ INTERFACE=""
 ADDRESSES=( )
 MTU=""
 DNS=( )
+DNS_SEARCH=( )
 TABLE=""
 PRE_UP=( )
 POST_UP=( )
@@ -43,7 +44,7 @@ die() {
 CONFIG_SEARCH_PATHS=( /etc/wireguard /usr/local/etc/wireguard )
 
 parse_options() {
-	local interface_section=0 line key value stripped path
+	local interface_section=0 line key value stripped path v
 	CONFIG_FILE="$1"
 	if [[ $CONFIG_FILE =~ ^[a-zA-Z0-9_=+.-]{1,15}$ ]]; then
 		for path in "${CONFIG_SEARCH_PATHS[@]}"; do
@@ -67,7 +68,9 @@ parse_options() {
 			case "$key" in
 			Address) ADDRESSES+=( ${value//,/ } ); continue ;;
 			MTU) MTU="$value"; continue ;;
-			DNS) DNS+=( ${value//,/ } ); continue ;;
+			DNS) for v in ${value//,/ }; do
+				[[ $v =~ (^[0-9.]+$)|(^.*:.*$) ]] && DNS+=( $v ) || DNS_SEARCH+=( $v )
+			done; continue ;;
 			Table) TABLE="$value"; continue ;;
 			PreUp) PRE_UP+=( "$value" ); continue ;;
 			PreDown) PRE_DOWN+=( "$value" ); continue ;;
@@ -213,6 +216,7 @@ collect_endpoints() {
 }
 
 declare -A SERVICE_DNS
+declare -A SERVICE_DNS_SEARCH
 collect_new_service_dns() {
 	local service get_response
 	local -A found_services
@@ -223,10 +227,16 @@ collect_new_service_dns() {
 		get_response="$(cmd networksetup -getdnsservers "$service")"
 		[[ $get_response == *" "* ]] && get_response="Empty"
 		[[ -n $get_response ]] && SERVICE_DNS["$service"]="$get_response"
+		get_response="$(cmd networksetup -getsearchdomains "$service")"
+		[[ $get_response == *" "* ]] && get_response="Empty"
+		[[ -n $get_response ]] && SERVICE_DNS_SEARCH["$service"]="$get_response"
 	done; } < <(networksetup -listallnetworkservices)
 
 	for service in "${!SERVICE_DNS[@]}"; do
-		[[ -n ${found_services["$service"]} ]] || unset SERVICE_DNS["$service"]
+		if ! [[ -n ${found_services["$service"]} ]]; then
+			unset SERVICE_DNS["$service"]
+			unset SERVICE_DNS_SEARCH["$service"]
+		fi
 	done
 }
 
@@ -287,7 +297,14 @@ set_dns() {
 	for service in "${!SERVICE_DNS[@]}"; do
 		while read -r response; do
 			[[ $response == *Error* ]] && echo "$response" >&2
-		done < <(cmd networksetup -setdnsservers "$service" "${DNS[@]}")
+		done < <(
+			cmd networksetup -setdnsservers "$service" "${DNS[@]}"
+			if [[ ${#DNS_SEARCH[@]} -eq 0 ]]; then
+				cmd networksetup -setsearchdomains "$service" Empty
+			else
+				cmd networksetup -setsearchdomains "$service" "${DNS_SEARCH[@]}"
+			fi
+		)
 	done
 }
 
@@ -296,7 +313,10 @@ del_dns() {
 	for service in "${!SERVICE_DNS[@]}"; do
 		while read -r response; do
 			[[ $response == *Error* ]] && echo "$response" >&2
-		done < <(cmd networksetup -setdnsservers "$service" ${SERVICE_DNS["$service"]} || true)
+		done < <(
+			cmd networksetup -setdnsservers "$service" ${SERVICE_DNS["$service"]} || true
+			cmd networksetup -setsearchdomains "$service" ${SERVICE_DNS_SEARCH["$service"]} || true
+		)
 	done
 }
 

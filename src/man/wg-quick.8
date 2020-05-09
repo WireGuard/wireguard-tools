@@ -76,7 +76,8 @@ Address \(em a comma-separated list of IP (v4 or v6) addresses (optionally with 
 to be assigned to the interface. May be specified multiple times.
 .IP \(bu
 DNS \(em a comma-separated list of IP (v4 or v6) addresses to be set as the interface's
-DNS servers. May be specified multiple times. Upon bringing the interface up, this runs
+DNS servers, or non-IP hostnames to be set as the interface's DNS search domains. May be
+specified multiple times. Upon bringing the interface up, this runs
 `resolvconf -a tun.\fIINTERFACE\fP -m 0 -x` and upon bringing it down, this runs
 `resolvconf -d tun.\fIINTERFACE\fP`. If these particular invocations of
 .BR resolvconf (8)

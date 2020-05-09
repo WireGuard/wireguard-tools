@@ -16,6 +16,7 @@ INTERFACE=""
 ADDRESSES=( )
 MTU=""
 DNS=( )
+DNS_SEARCH=( )
 TABLE=""
 PRE_UP=( )
 POST_UP=( )
@@ -56,7 +57,9 @@ parse_options() {
 			case "$key" in
 			Address) ADDRESSES+=( ${value//,/ } ); continue ;;
 			MTU) MTU="$value"; continue ;;
-			DNS) DNS+=( ${value//,/ } ); continue ;;
+			DNS) for v in ${value//,/ }; do
+				[[ $v =~ (^[0-9.]+$)|(^.*:.*$) ]] && DNS+=( $v ) || DNS_SEARCH+=( $v )
+			done; continue ;;
 			Table) TABLE="$value"; continue ;;
 			PreUp) PRE_UP+=( "$value" ); continue ;;
 			PreDown) PRE_DOWN+=( "$value" ); continue ;;
@@ -270,7 +273,9 @@ set_dns() {
 	[[ ${#DNS[@]} -gt 0 ]] || return 0
 	# TODO: this is a horrible way of doing it. Has OpenBSD no resolvconf?
 	cmd cp /etc/resolv.conf "/etc/resolv.conf.wg-quick-backup.$INTERFACE"
-	cmd printf 'nameserver %s\n' "${DNS[@]}" > /etc/resolv.conf
+	{ cmd printf 'nameserver %s\n' "${DNS[@]}"
+	  [[ ${#DNS_SEARCH[@]} -eq 0 ]] || cmd printf 'search %s\n' "${DNS_SEARCH[*]}"
+	} > /etc/resolv.conf
 }
 
 unset_dns() {

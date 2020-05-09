@@ -16,6 +16,7 @@ INTERFACE=""
 ADDRESSES=( )
 MTU=""
 DNS=( )
+DNS_SEARCH=( )
 TABLE=""
 PRE_UP=( )
 POST_UP=( )
@@ -60,7 +61,7 @@ clean_temp() {
 }
 
 parse_options() {
-	local interface_section=0 line key value stripped path
+	local interface_section=0 line key value stripped path v
 	CONFIG_FILE="$1"
 	if [[ $CONFIG_FILE =~ ^[a-zA-Z0-9_=+.-]{1,15}$ ]]; then
 		for path in "${CONFIG_SEARCH_PATHS[@]}"; do
@@ -84,7 +85,9 @@ parse_options() {
 			case "$key" in
 			Address) ADDRESSES+=( ${value//,/ } ); continue ;;
 			MTU) MTU="$value"; continue ;;
-			DNS) DNS+=( ${value//,/ } ); continue ;;
+			DNS) for v in ${value//,/ }; do
+				[[ $v =~ (^[0-9.]+$)|(^.*:.*$) ]] && DNS+=( $v ) || DNS_SEARCH+=( $v )
+			done; continue ;;
 			Table) TABLE="$value"; continue ;;
 			PreUp) PRE_UP+=( "$value" ); continue ;;
 			PreDown) PRE_DOWN+=( "$value" ); continue ;;
@@ -297,7 +300,9 @@ monitor_daemon() {
 HAVE_SET_DNS=0
 set_dns() {
 	[[ ${#DNS[@]} -gt 0 ]] || return 0
-	printf 'nameserver %s\n' "${DNS[@]}" | cmd resolvconf -a "$INTERFACE" -x
+	{ printf 'nameserver %s\n' "${DNS[@]}"
+	  [[ ${#DNS_SEARCH[@]} -eq 0 ]] || printf 'search %s\n' "${DNS_SEARCH[*]}"
+	} | cmd resolvconf -a "$INTERFACE" -x
 	HAVE_SET_DNS=1
 }
 

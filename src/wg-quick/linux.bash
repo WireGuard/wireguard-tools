@@ -16,6 +16,7 @@ INTERFACE=""
 ADDRESSES=( )
 MTU=""
 DNS=( )
+DNS_SEARCH=( )
 TABLE=""
 PRE_UP=( )
 POST_UP=( )
@@ -37,7 +38,7 @@ die() {
 }
 
 parse_options() {
-	local interface_section=0 line key value stripped
+	local interface_section=0 line key value stripped v
 	CONFIG_FILE="$1"
 	[[ $CONFIG_FILE =~ ^[a-zA-Z0-9_=+.-]{1,15}$ ]] && CONFIG_FILE="/etc/wireguard/$CONFIG_FILE.conf"
 	[[ -e $CONFIG_FILE ]] || die "\`$CONFIG_FILE' does not exist"
@@ -56,7 +57,9 @@ parse_options() {
 			case "$key" in
 			Address) ADDRESSES+=( ${value//,/ } ); continue ;;
 			MTU) MTU="$value"; continue ;;
-			DNS) DNS+=( ${value//,/ } ); continue ;;
+			DNS) for v in ${value//,/ }; do
+				[[ $v =~ (^[0-9.]+$)|(^.*:.*$) ]] && DNS+=( $v ) || DNS_SEARCH+=( $v )
+			done; continue ;;
 			Table) TABLE="$value"; continue ;;
 			PreUp) PRE_UP+=( "$value" ); continue ;;
 			PreDown) PRE_DOWN+=( "$value" ); continue ;;
@@ -150,7 +153,9 @@ resolvconf_iface_prefix() {
 HAVE_SET_DNS=0
 set_dns() {
 	[[ ${#DNS[@]} -gt 0 ]] || return 0
-	printf 'nameserver %s\n' "${DNS[@]}" | cmd resolvconf -a "$(resolvconf_iface_prefix)$INTERFACE" -m 0 -x
+	{ printf 'nameserver %s\n' "${DNS[@]}"
+	  [[ ${#DNS_SEARCH[@]} -eq 0 ]] || printf 'search %s\n' "${DNS_SEARCH[*]}"
+	} | cmd resolvconf -a "$(resolvconf_iface_prefix)$INTERFACE" -m 0 -x
 	HAVE_SET_DNS=1
 }
 

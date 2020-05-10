@@ -62,7 +62,7 @@ static int string_list_add(struct string_list *list, const char *str)
 		char *new_buffer;
 		size_t new_cap = list->cap * 2;
 
-		if (new_cap <  list->len +len + 1)
+		if (new_cap < list->len + len + 1)
 			new_cap = list->len + len + 1;
 		new_buffer = realloc(list->buffer, new_cap);
 		if (!new_buffer)

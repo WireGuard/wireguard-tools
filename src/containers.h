@@ -12,7 +12,15 @@
 #include <sys/socket.h>
 #include <net/if.h>
 #include <netinet/in.h>
+#if defined(__linux__)
 #include <linux/wireguard.h>
+#elif defined(__OpenBSD__)
+#include <net/if_wg.h>
+#endif
+
+#ifndef WG_KEY_LEN
+#define WG_KEY_LEN 32
+#endif
 
 /* Cross platform __kernel_timespec */
 struct timespec64 {

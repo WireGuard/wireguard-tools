@@ -8,6 +8,7 @@ set -e -o pipefail
 shopt -s extglob
 export LC_ALL=C
 
+exec 3>&2
 SELF="$(readlink -f "${BASH_SOURCE[0]}")"
 export PATH="${SELF%/*}:$PATH"
 
@@ -28,7 +29,7 @@ PROGRAM="${0##*/}"
 ARGS=( "$@" )
 
 cmd() {
-	echo "[#] $*" >&2
+	echo "[#] $*" >&3
 	"$@"
 }
 
@@ -91,34 +92,38 @@ get_real_interface() {
 	wg show interfaces >/dev/null
 	[[ -f "/var/run/wireguard/$INTERFACE.name" ]] || return 1
 	interface="$(< "/var/run/wireguard/$INTERFACE.name")"
-	[[ -n $interface && -S "/var/run/wireguard/$interface.sock" ]] || return 1
-	diff=$(( $(stat -f %m "/var/run/wireguard/$interface.sock" 2>/dev/null || echo 200) - $(stat -f %m "/var/run/wireguard/$INTERFACE.name" 2>/dev/null || echo 100) ))
-	[[ $diff -ge 2 || $diff -le -2 ]] && return 1
+	if [[ $interface != wg* ]]; then
+		[[ -n $interface && -S "/var/run/wireguard/$interface.sock" ]] || return 1
+		diff=$(( $(stat -f %m "/var/run/wireguard/$interface.sock" 2>/dev/null || echo 200) - $(stat -f %m "/var/run/wireguard/$INTERFACE.name" 2>/dev/null || echo 100) ))
+		[[ $diff -ge 2 || $diff -le -2 ]] && return 1
+		echo "[+] Tun interface for $INTERFACE is $interface" >&2
+	else
+		[[ " $(wg show interfaces) " == *" $interface "* ]] || return 1
+	fi
 	REAL_INTERFACE="$interface"
-	echo "[+] Interface for $INTERFACE is $REAL_INTERFACE" >&2
 	return 0
 }
 
 add_if() {
-	local index
-	echo "find wg" | config -e /bsd 2>/dev/null | grep "wg count 1" >/dev/null
-	if [[ $? == 0 ]]; then
-		REAL_INTERFACE=""
-		index=0
-		while [[ $REAL_INTERFACE == "" ]]; do
-			ifconfig wg$index create
-			if [[ $? == 0 ]]; then
-				$REAL_INTERFACE="wg$index"
-			fi
-			index=$((index+1))
-		done
-		echo "[+] Interface for $INTERFACE is $REAL_INTERFACE" >&2
-	else
-		export WG_TUN_NAME_FILE="/var/run/wireguard/$INTERFACE.name"
-		mkdir -p "/var/run/wireguard/"
-		cmd "${WG_QUICK_USERSPACE_IMPLEMENTATION:-wireguard-go}" tun
-		get_real_interface
-	fi
+	local index=0 ret
+	while true; do
+		if ret="$(cmd ifconfig wg$index create 2>&1)"; then
+			mkdir -p "/var/run/wireguard/"
+			echo wg$index > /var/run/wireguard/$INTERFACE.name
+			get_real_interface
+			return 0
+		fi
+		if [[ $ret != *"ifconfig: SIOCIFCREATE: File exists"* ]]; then
+			echo "[!] Missing WireGuard kernel support ($ret). Falling back to slow userspace implementation." >&3
+			break
+		fi
+		echo "[+] wg$index in use, trying next"
+		((++index))
+	done
+	export WG_TUN_NAME_FILE="/var/run/wireguard/$INTERFACE.name"
+	mkdir -p "/var/run/wireguard/"
+	cmd "${WG_QUICK_USERSPACE_IMPLEMENTATION:-wireguard-go}" tun
+	get_real_interface
 }
 
 del_routes() {
@@ -148,7 +153,11 @@ del_routes() {
 
 del_if() {
 	unset_dns
-	[[ -z $REAL_INTERFACE ]] || cmd rm -f "/var/run/wireguard/$REAL_INTERFACE.sock"
+	if [[ -n $REAL_INTERFACE && $REAL_INTERFACE != wg* ]]; then
+		cmd rm -f "/var/run/wireguard/$REAL_INTERFACE.sock"
+	else
+		cmd ifconfig $REAL_INTERFACE destroy
+	fi
 	cmd rm -f "/var/run/wireguard/$INTERFACE.name"
 }
 

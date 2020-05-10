@@ -100,10 +100,25 @@ get_real_interface() {
 }
 
 add_if() {
-	export WG_TUN_NAME_FILE="/var/run/wireguard/$INTERFACE.name"
-	mkdir -p "/var/run/wireguard/"
-	cmd "${WG_QUICK_USERSPACE_IMPLEMENTATION:-wireguard-go}" tun
-	get_real_interface
+	local index
+	echo "find wg" | config -e /bsd 2>/dev/null | grep "wg count 1" >/dev/null
+	if [[ $? == 0 ]]; then
+		REAL_INTERFACE=""
+		index=0
+		while [[ $REAL_INTERFACE == "" ]]; do
+			ifconfig wg$index create
+			if [[ $? == 0 ]]; then
+				$REAL_INTERFACE="wg$index"
+			fi
+			index=$((index+1))
+		done
+		echo "[+] Interface for $INTERFACE is $REAL_INTERFACE" >&2
+	else
+		export WG_TUN_NAME_FILE="/var/run/wireguard/$INTERFACE.name"
+		mkdir -p "/var/run/wireguard/"
+		cmd "${WG_QUICK_USERSPACE_IMPLEMENTATION:-wireguard-go}" tun
+		get_real_interface
+	fi
 }
 
 del_routes() {

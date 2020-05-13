@@ -25,26 +25,16 @@
 #define SIOCSWG _IOWR('i', 210, struct wg_data_io)
 #define SIOCGWG _IOWR('i', 211, struct wg_data_io)
 
-struct wg_data_io {
-	char	 wgd_name[IFNAMSIZ];
-	size_t	 wgd_size;	/* size of the mem below */
-	void	*wgd_mem;	/* wg_interface_io{1},(wg_peer_io,wg_aip_io*)* */
-};
+#define a_ipv4	a_addr.addr_ipv4
+#define a_ipv6	a_addr.addr_ipv6
 
-#define WG_INTERFACE_HAS_PUBLIC		(1 << 0)
-#define WG_INTERFACE_HAS_PRIVATE	(1 << 1)
-#define WG_INTERFACE_HAS_PORT		(1 << 2)
-#define WG_INTERFACE_HAS_RTABLE		(1 << 3)
-#define WG_INTERFACE_REPLACE_PEERS	(1 << 4)
-
-struct wg_interface_io {
-	uint8_t			 i_flags;
-	struct wg_peer_io	*i_peers;
-
-	in_port_t		 i_port;
-	int			 i_rtable;
-	uint8_t			 i_public[WG_KEY_LEN];
-	uint8_t			 i_private[WG_KEY_LEN];
+struct wg_aip_io {
+	sa_family_t	 a_af;
+	int		 a_cidr;
+	union wg_aip_addr {
+		struct in_addr		addr_ipv4;
+		struct in6_addr		addr_ipv6;
+	}		 a_addr;
 };
 
 #define WG_PEER_HAS_PUBLIC		(1 << 0)
@@ -60,42 +50,43 @@ struct wg_interface_io {
 #define p_sin6		p_endpoint.sa_sin6
 
 struct wg_peer_io {
-	int			 p_flags;
-	struct wg_peer_io	*p_next;
-	struct wg_aip_io	*p_aips;
-
-	int			 p_protocol_version;
-	uint8_t			 p_public[WG_KEY_LEN];
-	uint8_t			 p_psk[WG_KEY_LEN];
-	uint16_t		 p_pka;
+	int			p_flags;
+	int			p_protocol_version;
+	uint8_t			p_public[WG_KEY_LEN];
+	uint8_t			p_psk[WG_KEY_LEN];
+	uint16_t		p_pka;
 	union wg_peer_endpoint {
 		struct sockaddr		sa_sa;
 		struct sockaddr_in	sa_sin;
 		struct sockaddr_in6	sa_sin6;
-	}			 p_endpoint;
-
-	uint64_t		 p_txbytes;
-	uint64_t		 p_rxbytes;
-	struct timespec		 p_last_handshake; /* nanotime */
+	}			p_endpoint;
+	uint64_t		p_txbytes;
+	uint64_t		p_rxbytes;
+	struct timespec		p_last_handshake; /* nanotime */
+	size_t			p_aips_count;
+	struct wg_aip_io	p_aips[];
 };
 
-#define a_af	a_data.d_af
-#define a_cidr	a_data.d_cidr
-#define a_addr	a_data.d_addr
-#define a_ipv4	a_addr.addr_ipv4
-#define a_ipv6	a_addr.addr_ipv6
+#define WG_INTERFACE_HAS_PUBLIC		(1 << 0)
+#define WG_INTERFACE_HAS_PRIVATE	(1 << 1)
+#define WG_INTERFACE_HAS_PORT		(1 << 2)
+#define WG_INTERFACE_HAS_RTABLE		(1 << 3)
+#define WG_INTERFACE_REPLACE_PEERS	(1 << 4)
 
-struct wg_aip_io {
-	struct wg_aip_io	*a_next;
+struct wg_interface_io {
+	uint8_t			i_flags;
+	in_port_t		i_port;
+	int			i_rtable;
+	uint8_t			i_public[WG_KEY_LEN];
+	uint8_t			i_private[WG_KEY_LEN];
+	size_t			i_peers_count;
+	struct wg_peer_io	i_peers[];
+};
 
-	struct wg_aip_data {
-		sa_family_t		 d_af;
-		int			 d_cidr;
-		union wg_aip_addr {
-			struct in_addr		addr_ipv4;
-			struct in6_addr		addr_ipv6;
-		}			 d_addr;
-	}			 a_data;
+struct wg_data_io {
+	char	 		 wgd_name[IFNAMSIZ];
+	size_t			 wgd_size;	/* total size of the memory pointed to by wgd_interface */
+	struct wg_interface_io	*wgd_interface;
 };
 
 #endif /* __IF_WG_H__ */

@@ -48,7 +48,7 @@ CFLAGS += -DRUNSTATEDIR="\"$(RUNSTATEDIR)\""
 ifeq ($(DEBUG),yes)
 CFLAGS += -g
 endif
-WIREGUARD_TOOLS_VERSION = $(patsubst v%,%,$(shell GIT_CEILING_DIRECTORIES="$(PWD)/../.." git describe --dirty 2>/dev/null))
+WIREGUARD_TOOLS_VERSION = $(patsubst v%,%,$(shell GIT_DIR="$(PWD)/../.git" git describe --dirty 2>/dev/null))
 ifneq ($(WIREGUARD_TOOLS_VERSION),)
 CFLAGS += -D'WIREGUARD_TOOLS_VERSION="$(WIREGUARD_TOOLS_VERSION)"'
 endif

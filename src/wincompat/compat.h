@@ -18,8 +18,6 @@
 #undef min
 #undef max
 
-#define WINCOMPAT
-
 #define IFNAMSIZ 64
 #define EAI_SYSTEM -99
 

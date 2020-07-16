@@ -10,7 +10,7 @@ export LC_ALL=C
 
 CONFIG_FILE="$1"
 [[ $CONFIG_FILE =~ ^[a-zA-Z0-9_=+.-]{1,15}$ ]] && CONFIG_FILE="/etc/wireguard/$CONFIG_FILE.conf"
-[[ $CONFIG_FILE =~ /?([a-zA-Z0-9_=+.-]{1,15})\.conf$ ]]
+[[ $CONFIG_FILE =~ /?([a-zA-Z0-9_=+.-]{1,15})\.(conf|netdev)$ ]]
 INTERFACE="${BASH_REMATCH[1]}"
 
 process_peer() {
@@ -33,7 +33,7 @@ while read -r line || [[ -n $line ]]; do
 	key="${stripped%%=*}"; key="${key##*([[:space:]])}"; key="${key%%*([[:space:]])}"
 	value="${stripped#*=}"; value="${value##*([[:space:]])}"; value="${value%%*([[:space:]])}"
 	[[ $key == "["* ]] && { process_peer; reset_peer_section; }
-	[[ $key == "[Peer]" ]] && PEER_SECTION=1
+	[[ $key =~ \[(WireGuard)?Peer\] ]] && PEER_SECTION=1
 	if [[ $PEER_SECTION -eq 1 ]]; then
 		case "$key" in
 		PublicKey) PUBLIC_KEY="$value"; continue ;;

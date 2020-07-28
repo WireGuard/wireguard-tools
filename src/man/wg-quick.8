@@ -254,9 +254,7 @@ This will load the configuration file `/etc/wireguard/wgnet0.conf'.
 The \fIstrip\fP command is useful for reloading configuration files without disrupting active
 sessions:
 
-\fB    # wg addconf wgnet0 <(wg-quick strip wgnet0)\fP
-
-(Note that the above command will add and update peers but will not remove peers.)
+\fB    # wg syncconf wgnet0 <(wg-quick strip wgnet0)\fP
 
 .SH SEE ALSO
 .BR wg (8),

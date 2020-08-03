@@ -132,9 +132,9 @@ set_mtu_up() {
 		[[ $endpoint =~ ^\[?([a-z0-9:.]+)\]?:[0-9]+$ ]] || continue
 		output="$(ip route get "${BASH_REMATCH[1]}" || true)"
 		[[ ( $output =~ mtu\ ([0-9]+) || ( $output =~ dev\ ([^ ]+) && $(ip link show dev "${BASH_REMATCH[1]}") =~ mtu\ ([0-9]+) ) ) && ${BASH_REMATCH[1]} -gt $mtu ]] && mtu="${BASH_REMATCH[1]}"
-	done < <(wg show "$INTERFACE" endpoints)
+	done < <(wg show "$INTERFACE" endpoints); wait $!
 	if [[ $mtu -eq 0 ]]; then
-		read -r output < <(ip route show default || true) || true
+		read -r output < <(ip route show default) || true
 		[[ ( $output =~ mtu\ ([0-9]+) || ( $output =~ dev\ ([^ ]+) && $(ip link show dev "${BASH_REMATCH[1]}") =~ mtu\ ([0-9]+) ) ) && ${BASH_REMATCH[1]} -gt $mtu ]] && mtu="${BASH_REMATCH[1]}"
 	fi
 	[[ $mtu -gt 0 ]] || mtu=1500
@@ -191,8 +191,8 @@ remove_firewall() {
 		local table nftcmd
 		while read -r table; do
 			[[ $table == *" wg-quick-$INTERFACE" ]] && printf -v nftcmd '%sdelete %s\n' "$nftcmd" "$table"
-		done < <(nft list tables 2>/dev/null)
-		[[ -z $nftcmd ]] || cmd nft -f <(echo -n "$nftcmd")
+		done < <(nft list tables 2>/dev/null) || true
+		[[ -z $nftcmd ]] || cmd nft -f <(echo -n "$nftcmd"); wait $!
 	fi
 	if type -p iptables >/dev/null; then
 		local line iptables found restore
@@ -202,7 +202,7 @@ remove_firewall() {
 				[[ $line == "*"* || $line == COMMIT || $line == "-A "*"-m comment --comment \"wg-quick(8) rule for $INTERFACE\""* ]] || continue
 				[[ $line == "-A"* ]] && found=1
 				printf -v restore '%s%s\n' "$restore" "${line/#-A/-D}"
-			done < <($iptables-save 2>/dev/null)
+			done < <($iptables-save 2>/dev/null) || true
 			[[ $found -ne 1 ]] || echo -n "$restore" | cmd $iptables-restore -n
 		done
 	fi
@@ -233,22 +233,22 @@ add_default() {
 		[[ $line =~ .*inet6?\ ([0-9a-f:.]+)/[0-9]+.* ]] || continue
 		printf -v restore '%s-I PREROUTING ! -i %s -d %s -m addrtype ! --src-type LOCAL -j DROP %s\n' "$restore" "$INTERFACE" "${BASH_REMATCH[1]}" "$marker"
 		printf -v nftcmd '%sadd rule %s %s preraw iifname != "%s" %s daddr %s fib saddr type != local drop\n' "$nftcmd" "$pf" "$nftable" "$INTERFACE" "$pf" "${BASH_REMATCH[1]}"
-	done < <(ip -o $proto addr show dev "$INTERFACE" 2>/dev/null)
+	done < <(ip -o $proto addr show dev "$INTERFACE"); wait $!
 	printf -v restore '%sCOMMIT\n*mangle\n-I POSTROUTING -m mark --mark %d -p udp -j CONNMARK --save-mark %s\n-I PREROUTING -p udp -j CONNMARK --restore-mark %s\nCOMMIT\n' "$restore" $table "$marker" "$marker"
 	printf -v nftcmd '%sadd rule %s %s postmangle meta l4proto udp mark %d ct mark set mark \n' "$nftcmd" "$pf" "$nftable" $table
 	printf -v nftcmd '%sadd rule %s %s premangle meta l4proto udp meta mark set ct mark \n' "$nftcmd" "$pf" "$nftable"
 	[[ $proto == -4 ]] && cmd sysctl -q net.ipv4.conf.all.src_valid_mark=1
 	if type -p nft >/dev/null; then
-		cmd nft -f <(echo -n "$nftcmd")
+		cmd nft -f <(echo -n "$nftcmd"); wait $!
 	else
-		echo -n "$restore" | cmd $iptables-restore -n
+		echo -n "$restore" | cmd $iptables-restore -n; wait $!
 	fi
 	HAVE_SET_FIREWALL=1
 	return 0
 }
 
 set_config() {
-	cmd wg setconf "$INTERFACE" <(echo "$WG_CONFIG")
+	cmd wg setconf "$INTERFACE" <(echo "$WG_CONFIG"); wait $!
 }
 
 save_config() {
@@ -260,7 +260,7 @@ save_config() {
 	done
 	while read -r address; do
 		[[ $address =~ ^nameserver\ ([a-zA-Z0-9_=+:%.-]+)$ ]] && new_config+="DNS = ${BASH_REMATCH[1]}"$'\n'
-	done < <(resolvconf -l "$(resolvconf_iface_prefix)$INTERFACE" 2>/dev/null || cat "/etc/resolvconf/run/interface/$(resolvconf_iface_prefix)$INTERFACE" 2>/dev/null)
+	done < <(resolvconf -l "$(resolvconf_iface_prefix)$INTERFACE" 2>/dev/null || cat "/etc/resolvconf/run/interface/$(resolvconf_iface_prefix)$INTERFACE" 2>/dev/null) || true
 	[[ -n $MTU && $(ip link show dev "$INTERFACE") =~ mtu\ ([0-9]+) ]] && new_config+="MTU = ${BASH_REMATCH[1]}"$'\n'
 	[[ -n $TABLE ]] && new_config+="Table = $TABLE"$'\n'
 	[[ $SAVE_CONFIG -eq 0 ]] || new_config+=$'SaveConfig = true\n'
@@ -335,7 +335,7 @@ cmd_up() {
 	done
 	set_mtu_up
 	set_dns
-	for i in $(while read -r _ i; do for i in $i; do [[ $i =~ ^[0-9a-z:.]+/[0-9]+$ ]] && echo "$i"; done; done < <(wg show "$INTERFACE" allowed-ips) | sort -nr -k 2 -t /); do
+	for i in $({ while read -r _ i; do for i in $i; do [[ $i =~ ^[0-9a-z:.]+/[0-9]+$ ]] && echo "$i"; done; done < <(wg show "$INTERFACE" allowed-ips); wait $!; } | sort -nr -k 2 -t /); do
 		add_route "$i"
 	done
 	execute_hooks "${POST_UP[@]}"

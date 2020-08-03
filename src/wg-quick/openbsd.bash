@@ -131,14 +131,14 @@ del_routes() {
 	[[ -n $REAL_INTERFACE ]] || return 0
 	while read -r destination _ _ _ _ netif _; do
 		[[ $netif == "$REAL_INTERFACE" ]] && todelete+=( "$destination" )
-	done < <(netstat -nr -f inet)
+	done < <(netstat -nr -f inet); wait $!
 	for destination in "${todelete[@]}"; do
 		cmd route -q -n delete -inet "$destination" || true
 	done
 	todelete=( )
 	while read -r destination gateway _ netif; do
 		[[ $netif == "$REAL_INTERFACE" || ( $netif == lo* && $gateway == "$REAL_INTERFACE" ) ]] && todelete+=( "$destination" )
-	done < <(netstat -nr -f inet6)
+	done < <(netstat -nr -f inet6); wait $!
 	for destination in "${todelete[@]}"; do
 		cmd route -q -n delete -inet6 "$destination" || true
 	done
@@ -189,9 +189,9 @@ set_mtu() {
 		[[ ${BASH_REMATCH[1]} == *:* ]] && family=inet6
 		output="$(route -n get "-$family" "${BASH_REMATCH[1]}" || true)"
 		[[ $output =~ interface:\ ([^ ]+)$'\n' && $(ifconfig "${BASH_REMATCH[1]}") =~ mtu\ ([0-9]+) && ${BASH_REMATCH[1]} -gt $mtu ]] && mtu="${BASH_REMATCH[1]}"
-	done < <(wg show "$REAL_INTERFACE" endpoints)
+	done < <(wg show "$REAL_INTERFACE" endpoints); wait $!
 	if [[ $mtu -eq 0 ]]; then
-		read -r output < <(route -n get default || true) || true
+		read -r output < <(route -n get default) || true
 		[[ $output =~ interface:\ ([^ ]+)$'\n' && $(ifconfig "${BASH_REMATCH[1]}") =~ mtu\ ([0-9]+) && ${BASH_REMATCH[1]} -gt $mtu ]] && mtu="${BASH_REMATCH[1]}"
 	fi
 	[[ $mtu -gt 0 ]] || mtu=1500
@@ -207,14 +207,14 @@ collect_gateways() {
 		[[ $destination == default ]] || continue
 		GATEWAY4="$gateway"
 		break
-	done < <(netstat -nr -f inet)
+	done < <(netstat -nr -f inet); wait $!
 
 	GATEWAY6=""
 	while read -r destination gateway _; do
 		[[ $destination == default ]] || continue
 		GATEWAY6="$gateway"
 		break
-	done < <(netstat -nr -f inet6)
+	done < <(netstat -nr -f inet6); wait $!
 }
 
 collect_endpoints() {
@@ -222,7 +222,7 @@ collect_endpoints() {
 	while read -r _ endpoint; do
 		[[ $endpoint =~ ^\[?([a-z0-9:.]+)\]?:[0-9]+$ ]] || continue
 		ENDPOINTS+=( "${BASH_REMATCH[1]}" )
-	done < <(wg show "$REAL_INTERFACE" endpoints)
+	done < <(wg show "$REAL_INTERFACE" endpoints); wait $!
 }
 
 set_endpoint_direct_route() {
@@ -290,7 +290,7 @@ monitor_daemon() {
 		ifconfig "$REAL_INTERFACE" >/dev/null 2>&1 || break
 		[[ $AUTO_ROUTE4 -eq 1 || $AUTO_ROUTE6 -eq 1 ]] && set_endpoint_direct_route
 		# TODO: set the mtu as well, but only if up
-	done < <(route -n monitor)) & disown
+	done < <(route -n monitor); wait $!) & disown
 }
 
 set_dns() {
@@ -339,7 +339,7 @@ add_route() {
 }
 
 set_config() {
-	cmd wg setconf "$REAL_INTERFACE" <(echo "$WG_CONFIG")
+	cmd wg setconf "$REAL_INTERFACE" <(echo "$WG_CONFIG"); wait $!
 }
 
 save_config() {
@@ -347,7 +347,7 @@ save_config() {
 	new_config=$'[Interface]\n'
 	{ read -r _; while read -r _ _ network address _; do
 		[[ $network == *Link* ]] || new_config+="Address = $address"$'\n'
-	done } < <(netstat -I "$REAL_INTERFACE" -n -v)
+	done } < <(netstat -I "$REAL_INTERFACE" -n -v); wait $!
 	# TODO: actually determine current DNS for interface
 	for address in "${DNS[@]}"; do
 		new_config+="DNS = $address"$'\n'
@@ -428,7 +428,7 @@ cmd_up() {
 	set_mtu
 	up_if
 	set_dns
-	for i in $(while read -r _ i; do for i in $i; do [[ $i =~ ^[0-9a-z:.]+/[0-9]+$ ]] && echo "$i"; done; done < <(wg show "$REAL_INTERFACE" allowed-ips) | sort -nr -k 2 -t /); do
+	for i in $({ while read -r _ i; do for i in $i; do [[ $i =~ ^[0-9a-z:.]+/[0-9]+$ ]] && echo "$i"; done; done < <(wg show "$REAL_INTERFACE" allowed-ips); wait $!; } | sort -nr -k 2 -t /); do
 		add_route "$i"
 	done
 	[[ $AUTO_ROUTE4 -eq 1 || $AUTO_ROUTE6 -eq 1 ]] && set_endpoint_direct_route

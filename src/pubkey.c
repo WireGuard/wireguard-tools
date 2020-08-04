@@ -31,7 +31,7 @@ int pubkey_main(int argc, char *argv[])
 
 	for (;;) {
 		trailing_char = getc(stdin);
-		if (!trailing_char || isspace(trailing_char) || isblank(trailing_char))
+		if (!trailing_char || isspace(trailing_char))
 			continue;
 		if (trailing_char == EOF)
 			break;

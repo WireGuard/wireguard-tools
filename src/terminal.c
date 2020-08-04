@@ -3,7 +3,6 @@
  * Copyright (C) 2015-2020 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
  */
 
-#include <ctype.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -11,6 +10,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include "ctype.h"
 
 static bool color_mode(void)
 {
@@ -46,7 +46,7 @@ static void filter_ansi(const char *fmt, va_list args)
 			if (str[i] == '\x1b' && str[i + 1] == '[') {
 				str[i] = str[i + 1] = '\0';
 				for (j = i + 2; j < len; ++j) {
-					if (isalpha(str[j]))
+					if (char_is_alpha(str[j]))
 						break;
 					str[j] = '\0';
 				}

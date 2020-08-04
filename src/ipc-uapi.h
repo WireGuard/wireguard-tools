@@ -4,7 +4,6 @@
  */
 
 #include <arpa/inet.h>
-#include <ctype.h>
 #include <errno.h>
 #include <net/if.h>
 #include <netdb.h>
@@ -17,6 +16,7 @@
 #include "containers.h"
 #include "curve25519.h"
 #include "encoding.h"
+#include "ctype.h"
 
 #ifdef _WIN32
 #include "ipc-uapi-windows.h"
@@ -102,7 +102,7 @@ static int userspace_set_device(struct wgdevice *dev)
 #define NUM(max) ({ \
 	unsigned long long num; \
 	char *end; \
-	if (!isdigit(value[0])) \
+	if (!char_is_digit(value[0])) \
 		break; \
 	num = strtoull(value, &end, 10); \
 	if (*end || num > max) \
@@ -223,7 +223,7 @@ static int userspace_get_device(struct wgdevice **out, const char *iface)
 			struct wgallowedip *new_allowedip;
 			char *end, *mask = value, *ip = strsep(&mask, "/");
 
-			if (!mask || !isdigit(mask[0]))
+			if (!mask || !char_is_digit(mask[0]))
 				break;
 			new_allowedip = calloc(1, sizeof(*new_allowedip));
 			if (!new_allowedip) {

@@ -5,7 +5,6 @@
 
 #include <arpa/inet.h>
 #include <limits.h>
-#include <ctype.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +18,7 @@
 #include "containers.h"
 #include "ipc.h"
 #include "encoding.h"
+#include "ctype.h"
 
 #define COMMENT_CHAR '#'
 
@@ -86,7 +86,7 @@ static inline bool parse_fwmark(uint32_t *fwmark, uint32_t *flags, const char *v
 		return true;
 	}
 
-	if (!isdigit(value[0]))
+	if (!char_is_digit(value[0]))
 		goto err;
 
 	if (strlen(value) > 2 && value[0] == '0' && value[1] == 'x')
@@ -141,7 +141,7 @@ static bool parse_keyfile(uint8_t key[static WG_KEY_LEN], const char *path)
 	dst[WG_KEY_LEN_BASE64 - 1] = '\0';
 
 	while ((c = getc(f)) != EOF) {
-		if (!isspace(c)) {
+		if (!char_is_space(c)) {
 			fprintf(stderr, "Found trailing character in key file: `%c'\n", c);
 			goto out;
 		}
@@ -290,7 +290,7 @@ static inline bool parse_persistent_keepalive(uint16_t *interval, uint32_t *flag
 		return true;
 	}
 
-	if (!isdigit(value[0]))
+	if (!char_is_digit(value[0]))
 		goto err;
 
 	ret = strtoul(value, &end, 10);
@@ -375,7 +375,7 @@ static inline bool parse_allowedips(struct wgpeer *peer, struct wgallowedip **la
 		}
 
 		if (mask) {
-			if (!isdigit(mask[0]))
+			if (!char_is_digit(mask[0]))
 				goto err;
 			cidr = strtoul(mask, &end, 10);
 			if (*end || (cidr > 32 && new_allowedip->family == AF_INET) || (cidr > 128 && new_allowedip->family == AF_INET6))
@@ -501,7 +501,7 @@ bool config_read_line(struct config_ctx *ctx, const char *input)
 	}
 
 	for (size_t i = 0; i < len; ++i) {
-		if (!isspace(input[i]))
+		if (!char_is_space(input[i]))
 			line[cleaned_len++] = input[i];
 	}
 	if (!cleaned_len)
@@ -555,7 +555,7 @@ static char *strip_spaces(const char *in)
 		return NULL;
 	}
 	for (i = 0, l = 0; i < t; ++i) {
-		if (!isspace(in[i]))
+		if (!char_is_space(in[i]))
 			out[l++] = in[i];
 	}
 	return out;

@@ -5,11 +5,11 @@
 
 #include <errno.h>
 #include <stdio.h>
-#include <ctype.h>
 
 #include "curve25519.h"
 #include "encoding.h"
 #include "subcommands.h"
+#include "ctype.h"
 
 int pubkey_main(int argc, char *argv[])
 {
@@ -31,7 +31,7 @@ int pubkey_main(int argc, char *argv[])
 
 	for (;;) {
 		trailing_char = getc(stdin);
-		if (!trailing_char || isspace(trailing_char))
+		if (!trailing_char || char_is_space(trailing_char))
 			continue;
 		if (trailing_char == EOF)
 			break;

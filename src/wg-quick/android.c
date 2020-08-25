@@ -726,7 +726,7 @@ static void up_if(unsigned int *netid, const char *iface, uint16_t listen_port)
 		cmd("iptables -I INPUT 1 -p udp --dport %u -j ACCEPT -m comment --comment \"wireguard rule %s\"", listen_port, iface);
 		cmd("ip6tables -I INPUT 1 -p udp --dport %u -j %s -m comment --comment \"wireguard rule %s\"", listen_port, should_block_ipv6(iface) ? "DROP" : "ACCEPT", iface);
 	}
-	cndc("interface setcfg %s up", iface);
+	cmd("ip link set up dev %s", iface);
 	cndc("network create %u vpn 1 1", *netid);
 	cndc("network interface add %u %s", *netid, iface);
 }

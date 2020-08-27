@@ -92,7 +92,7 @@ detect_launchd() {
 			LAUNCHED_BY_LAUNCHD=1
 			break
 		fi
-	done < <(launchctl procinfo $$ 2>/dev/null); wait $!
+	done < <(launchctl procinfo $$ 2>/dev/null)
 }
 
 read_bool() {
@@ -132,14 +132,14 @@ del_routes() {
 	local todelete=( ) destination gateway netif
 	while read -r destination _ _ _ _ netif _; do
 		[[ $netif == "$REAL_INTERFACE" ]] && todelete+=( "$destination" )
-	done < <(netstat -nr -f inet); wait $!
+	done < <(netstat -nr -f inet)
 	for destination in "${todelete[@]}"; do
 		cmd route -q -n delete -inet "$destination" >/dev/null || true
 	done
 	todelete=( )
 	while read -r destination gateway _ netif; do
 		[[ $netif == "$REAL_INTERFACE" || ( $netif == lo* && $gateway == "$REAL_INTERFACE" ) ]] && todelete+=( "$destination" )
-	done < <(netstat -nr -f inet6); wait $!
+	done < <(netstat -nr -f inet6)
 	for destination in "${todelete[@]}"; do
 		cmd route -q -n delete -inet6 "$destination" >/dev/null || true
 	done
@@ -181,7 +181,7 @@ set_mtu() {
 			defaultif="$netif"
 			break
 		fi
-	done < <(netstat -nr -f inet); wait $!
+	done < <(netstat -nr -f inet)
 	[[ -n $defaultif && $(ifconfig "$defaultif") =~ mtu\ ([0-9]+) ]] && mtu="${BASH_REMATCH[1]}"
 	[[ $mtu -gt 0 ]] || mtu=1500
 	mtu=$(( mtu - 80 ))
@@ -197,14 +197,14 @@ collect_gateways() {
 		[[ $destination == default ]] || continue
 		GATEWAY4="$gateway"
 		break
-	done < <(netstat -nr -f inet); wait $!
+	done < <(netstat -nr -f inet)
 
 	GATEWAY6=""
 	while read -r destination gateway _; do
 		[[ $destination == default ]] || continue
 		GATEWAY6="$gateway"
 		break
-	done < <(netstat -nr -f inet6); wait $!
+	done < <(netstat -nr -f inet6)
 }
 
 collect_endpoints() {
@@ -212,7 +212,7 @@ collect_endpoints() {
 	while read -r _ endpoint; do
 		[[ $endpoint =~ ^\[?([a-z0-9:.]+)\]?:[0-9]+$ ]] || continue
 		ENDPOINTS+=( "${BASH_REMATCH[1]}" )
-	done < <(wg show "$REAL_INTERFACE" endpoints); wait $!
+	done < <(wg show "$REAL_INTERFACE" endpoints)
 }
 
 declare -A SERVICE_DNS
@@ -230,7 +230,7 @@ collect_new_service_dns() {
 		get_response="$(cmd networksetup -getsearchdomains "$service")"
 		[[ $get_response == *" "* ]] && get_response="Empty"
 		[[ -n $get_response ]] && SERVICE_DNS_SEARCH["$service"]="$get_response"
-	done; } < <(networksetup -listallnetworkservices); wait $!
+	done; } < <(networksetup -listallnetworkservices)
 
 	for service in "${!SERVICE_DNS[@]}"; do
 		if ! [[ -n ${found_services["$service"]} ]]; then
@@ -304,7 +304,7 @@ set_dns() {
 			else
 				cmd networksetup -setsearchdomains "$service" "${DNS_SEARCH[@]}"
 			fi
-		); wait $!
+		)
 	done
 }
 
@@ -316,7 +316,7 @@ del_dns() {
 		done < <(
 			cmd networksetup -setdnsservers "$service" ${SERVICE_DNS["$service"]} || true
 			cmd networksetup -setsearchdomains "$service" ${SERVICE_DNS_SEARCH["$service"]} || true
-		); wait $!
+		)
 	done
 }
 
@@ -339,7 +339,7 @@ monitor_daemon() {
 			set_dns
 			sleep 2 && kill -ALRM $pid 2>/dev/null &
 		fi
-	done < <(route -n monitor); wait $!) &
+	done < <(route -n monitor)) &
 	[[ -n $LAUNCHED_BY_LAUNCHD ]] || disown
 }
 
@@ -367,7 +367,7 @@ add_route() {
 }
 
 set_config() {
-	cmd wg setconf "$REAL_INTERFACE" <(echo "$WG_CONFIG"); wait $!
+	cmd wg setconf "$REAL_INTERFACE" <(echo "$WG_CONFIG")
 }
 
 save_config() {
@@ -375,7 +375,7 @@ save_config() {
 	new_config=$'[Interface]\n'
 	while read -r address; do
 		[[ $address =~ inet6?\ ([^ ]+) ]] && new_config+="Address = ${BASH_REMATCH[1]}"$'\n'
-	done < <(ifconfig "$REAL_INTERFACE"); wait $!
+	done < <(ifconfig "$REAL_INTERFACE")
 	# TODO: actually determine current DNS for interface
 	for address in "${DNS[@]}"; do
 		new_config+="DNS = $address"$'\n'
@@ -458,7 +458,7 @@ cmd_up() {
 	done
 	set_mtu
 	up_if
-	for i in $({ while read -r _ i; do for i in $i; do [[ $i =~ ^[0-9a-z:.]+/[0-9]+$ ]] && echo "$i"; done; done < <(wg show "$REAL_INTERFACE" allowed-ips); wait $!; } | sort -nr -k 2 -t /); do
+	for i in $(while read -r _ i; do for i in $i; do [[ $i =~ ^[0-9a-z:.]+/[0-9]+$ ]] && echo "$i"; done; done < <(wg show "$REAL_INTERFACE" allowed-ips) | sort -nr -k 2 -t /); do
 		add_route "$i"
 	done
 	[[ $AUTO_ROUTE4 -eq 1 || $AUTO_ROUTE6 -eq 1 ]] && set_endpoint_direct_route

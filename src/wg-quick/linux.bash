@@ -81,8 +81,27 @@ read_bool() {
 	esac
 }
 
+has_cap_net_admin() {
+	local line
+	while read -r line; do
+		[[ $line =~ ^CapEff:\	[0-9a-f]*([0-9a-f])[0-9a-f]{3}$ ]] || continue
+		(( 0x${BASH_REMATCH[1]} & 1 != 0 )) && return 0
+		return 1
+	done < /proc/self/status
+	return 1
+}
+
+config_file_is_writable() {
+	local cf="$1"
+	[[ $cf =~ ^[a-zA-Z0-9_=+.-]{1,15}$ ]] && CONFIG_FILE="/etc/wireguard/$cf.conf"
+	[[ -w $cf ]] && return 0
+	return 1
+}
+
 auto_su() {
-	[[ $UID == 0 ]] || exec sudo -p "$PROGRAM must be run as root. Please enter the password for %u to continue: " -- "$BASH" -- "$SELF" "${ARGS[@]}"
+	[[ $UID == 0 ]] && return 0
+	has_cap_net_admin && config_file_is_writable "${ARGS[2]}" && return 0
+	exec sudo -p "$PROGRAM must be run as root. Please enter the password for %u to continue: " -- "$BASH" -- "$SELF" "${ARGS[@]}"
 }
 
 add_if() {

@@ -785,6 +785,7 @@ static uid_t *get_uid_list(const char *selected_applications)
 static void set_users(unsigned int netid, const char *excluded_applications, const char *included_applications)
 {
 	_cleanup_free_ uid_t *uids = NULL;
+	uid_t *uid;
 	unsigned int args_per_command = 0;
 	_cleanup_free_ char *ranges = NULL;
 	char range[22];
@@ -796,14 +797,14 @@ static void set_users(unsigned int netid, const char *excluded_applications, con
 	}
 
 	if (excluded_applications || !included_applications) {
-		uids = get_uid_list(excluded_applications);
-		for (start = 0; *uids; start = *uids + 1, ++uids) {
-			if (start > *uids - 1)
+		uid = uids = get_uid_list(excluded_applications);
+		for (start = 0; *uid; start = *uid + 1, ++uid) {
+			if (start > *uid - 1)
 				continue;
-			else if (start == *uids - 1)
+			else if (start == *uid - 1)
 				snprintf(range, sizeof(range), "%u", start);
 			else
-				snprintf(range, sizeof(range), "%u-%u", start, *uids - 1);
+				snprintf(range, sizeof(range), "%u-%u", start, *uid - 1);
 			ranges = concat_and_free(ranges, " ", range);
 			if (++args_per_command % 18 == 0) {
 				cndc("network users add %u %s", netid, ranges);
@@ -816,8 +817,8 @@ static void set_users(unsigned int netid, const char *excluded_applications, con
 			ranges = concat_and_free(ranges, " ", range);
 		}
 	} else {
-		for (uids = get_uid_list(included_applications); *uids; ++uids) {
-			snprintf(range, sizeof(range), "%u", *uids);
+		for (uid = uids = get_uid_list(included_applications); *uid; ++uid) {
+			snprintf(range, sizeof(range), "%u", *uid);
 			ranges = concat_and_free(ranges, " ", range);
 			if (++args_per_command % 18 == 0) {
 				cndc("network users add %u %s", netid, ranges);

@@ -88,42 +88,33 @@ auto_su() {
 
 
 get_real_interface() {
-	local interface diff
-	wg show interfaces >/dev/null
-	[[ -f "/var/run/wireguard/$INTERFACE.name" ]] || return 1
-	interface="$(< "/var/run/wireguard/$INTERFACE.name")"
-	if [[ $interface != wg* ]]; then
-		[[ -n $interface && -S "/var/run/wireguard/$interface.sock" ]] || return 1
-		diff=$(( $(stat -f %m "/var/run/wireguard/$interface.sock" 2>/dev/null || echo 200) - $(stat -f %m "/var/run/wireguard/$INTERFACE.name" 2>/dev/null || echo 100) ))
-		[[ $diff -ge 2 || $diff -le -2 ]] && return 1
-		echo "[+] Tun interface for $INTERFACE is $interface" >&2
-	else
-		[[ " $(wg show interfaces) " == *" $interface "* ]] || return 1
-	fi
-	REAL_INTERFACE="$interface"
-	return 0
+	local interface line
+	while IFS= read -r line; do
+		if [[ $line =~ ^([a-z]+[0-9]+):\ .+ ]]; then
+			interface="${BASH_REMATCH[1]}"
+			continue
+		fi
+		if [[ $interface == wg* && $line =~ ^\	description:\ wg-quick:\ (.+) && ${BASH_REMATCH[1]} == "$INTERFACE" ]]; then
+			REAL_INTERFACE="$interface"
+			return 0
+		fi
+	done < <(ifconfig)
+	return 1
 }
 
 add_if() {
-	local index=0 ret
 	while true; do
-		if ret="$(cmd ifconfig wg$index create 2>&1)"; then
-			mkdir -p "/var/run/wireguard/"
-			echo wg$index > /var/run/wireguard/$INTERFACE.name
-			get_real_interface
+		local -A existing_ifs="( $(wg show interfaces | sed 's/\([^ ]*\)/[\1]=1/g') )"
+		local index ret
+		for ((index=0; index <= 2147483647; ++index)); do [[ -v existing_ifs[wg$index] ]] || break; done
+		if ret="$(cmd ifconfig wg$index create description "wg-quick: $INTERFACE" 2>&1)"; then
+			REAL_INTERFACE="wg$index"
 			return 0
 		fi
-		if [[ $ret != *"ifconfig: SIOCIFCREATE: File exists"* ]]; then
-			echo "[!] Missing WireGuard kernel support ($ret). Falling back to slow userspace implementation." >&3
-			break
-		fi
-		echo "[+] wg$index in use, trying next"
-		((++index))
+		[[ $ret == *"ifconfig: SIOCIFCREATE: File exists"* ]] && continue
+		echo "$ret" >&3
+		return 1
 	done
-	export WG_TUN_NAME_FILE="/var/run/wireguard/$INTERFACE.name"
-	mkdir -p "/var/run/wireguard/"
-	cmd "${WG_QUICK_USERSPACE_IMPLEMENTATION:-wireguard-go}" tun
-	get_real_interface
 }
 
 del_routes() {
@@ -153,12 +144,7 @@ del_routes() {
 
 del_if() {
 	unset_dns
-	if [[ -n $REAL_INTERFACE && $REAL_INTERFACE != wg* ]]; then
-		cmd rm -f "/var/run/wireguard/$REAL_INTERFACE.sock"
-	else
-		cmd ifconfig $REAL_INTERFACE destroy
-	fi
-	cmd rm -f "/var/run/wireguard/$INTERFACE.name"
+	[[ -n $REAL_INTERFACE ]] && cmd ifconfig $REAL_INTERFACE destroy
 }
 
 up_if() {
@@ -438,9 +424,7 @@ cmd_up() {
 }
 
 cmd_down() {
-	if ! get_real_interface || [[ " $(wg show interfaces) " != *" $REAL_INTERFACE "* ]]; then
-		die "\`$INTERFACE' is not a WireGuard interface"
-	fi
+	get_real_interface || die "\`$INTERFACE' is not a WireGuard interface"
 	execute_hooks "${PRE_DOWN[@]}"
 	[[ $SAVE_CONFIG -eq 0 ]] || save_config
 	del_if
@@ -449,9 +433,7 @@ cmd_down() {
 }
 
 cmd_save() {
-	if ! get_real_interface || [[ " $(wg show interfaces) " != *" $REAL_INTERFACE "* ]]; then
-		die "\`$INTERFACE' is not a WireGuard interface"
-	fi
+	get_real_interface || die "\`$INTERFACE' is not a WireGuard interface"
 	save_config
 }
 

@@ -92,8 +92,10 @@ static int userspace_set_device(struct wgdevice *dev)
 	fprintf(f, "\n");
 	fflush(f);
 
-	if (fscanf(f, "errno=%d\n\n", &ret) != 1)
+	if (fscanf(f, "errno=%d", &ret) != 1)
 		ret = errno ? -errno : -EPROTO;
+	if (getc(f) != '\n' || getc(f) != '\n')
+		ret = -EPROTO;
 	fclose(f);
 	errno = -ret;
 	return ret;

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include "containers.h"
+#include "ipc.h"
 
 struct string_list {
 	char *buffer;

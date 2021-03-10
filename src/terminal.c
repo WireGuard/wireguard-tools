@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include "ctype.h"
+#include "terminal.h"
 
 static bool color_mode(void)
 {

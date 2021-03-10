@@ -98,7 +98,7 @@ static bool sync_conf(struct wgdevice *file)
 	return true;
 }
 
-int setconf_main(int argc, char *argv[])
+int setconf_main(int argc, const char *argv[])
 {
 	struct wgdevice *device = NULL;
 	struct config_ctx ctx;

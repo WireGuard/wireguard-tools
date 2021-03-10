@@ -19,7 +19,7 @@ struct config_ctx {
 	bool is_peer_section, is_device_section;
 };
 
-struct wgdevice *config_read_cmd(char *argv[], int argc);
+struct wgdevice *config_read_cmd(const char *argv[], int argc);
 bool config_read_init(struct config_ctx *ctx, bool append);
 bool config_read_line(struct config_ctx *ctx, const char *line);
 struct wgdevice *config_read_finish(struct config_ctx *ctx);

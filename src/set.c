@@ -12,7 +12,7 @@
 #include "ipc.h"
 #include "subcommands.h"
 
-int set_main(int argc, char *argv[])
+int set_main(int argc, const char *argv[])
 {
 	struct wgdevice *device = NULL;
 	int ret = 1;

@@ -18,7 +18,7 @@
 #include "ipc.h"
 #include "subcommands.h"
 
-int showconf_main(int argc, char *argv[])
+int showconf_main(int argc, const char *argv[])
 {
 	char base64[WG_KEY_LEN_BASE64];
 	char ip[INET6_ADDRSTRLEN];

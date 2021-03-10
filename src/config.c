@@ -561,7 +561,7 @@ static char *strip_spaces(const char *in)
 	return out;
 }
 
-struct wgdevice *config_read_cmd(char *argv[], int argc)
+struct wgdevice *config_read_cmd(const char *argv[], int argc)
 {
 	struct wgdevice *device = calloc(1, sizeof(*device));
 	struct wgpeer *peer = NULL;

@@ -11,7 +11,7 @@
 #include "subcommands.h"
 #include "ctype.h"
 
-int pubkey_main(int argc, char *argv[])
+int pubkey_main(int argc, const char *argv[])
 {
 	uint8_t key[WG_KEY_LEN] __attribute__((aligned(sizeof(uintptr_t))));
 	char base64[WG_KEY_LEN_BASE64];

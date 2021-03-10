@@ -75,14 +75,14 @@ static char *key(const uint8_t key[static WG_KEY_LEN])
 	return base64;
 }
 
-static char *maybe_key(const uint8_t maybe_key[static WG_KEY_LEN], bool have_it)
+static const char *maybe_key(const uint8_t maybe_key[static WG_KEY_LEN], bool have_it)
 {
 	if (!have_it)
 		return "(none)";
 	return key(maybe_key);
 }
 
-static char *masked_key(const uint8_t masked_key[static WG_KEY_LEN])
+static const char *masked_key(const uint8_t masked_key[static WG_KEY_LEN])
 {
 	const char *var = getenv("WG_HIDE_KEYS");
 
@@ -376,7 +376,7 @@ static bool ugly_print(struct wgdevice *device, const char *param, bool with_int
 	return true;
 }
 
-int show_main(int argc, char *argv[])
+int show_main(int argc, const char *argv[])
 {
 	int ret = 0;
 

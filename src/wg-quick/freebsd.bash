@@ -8,6 +8,7 @@ set -e -o pipefail
 shopt -s extglob
 export LC_ALL=C
 
+exec 3>&2
 SELF="$(readlink -f "${BASH_SOURCE[0]}")"
 export PATH="${SELF%/*}:$PATH"
 
@@ -28,7 +29,7 @@ PROGRAM="${0##*/}"
 ARGS=( "$@" )
 
 cmd() {
-	echo "[#] $*" >&2
+	echo "[#] $*" >&3
 	"$@"
 }
 
@@ -114,6 +115,16 @@ auto_su() {
 }
 
 add_if() {
+	local ret rc
+	if ret="$(cmd ifconfig wg create name "$INTERFACE" 2>&1 >/dev/null)"; then
+		return 0
+	fi
+	rc=$?
+	if [[ $ret == *"ifconfig: ioctl SIOCSIFNAME (set name): File exists"* ]]; then
+		echo "$ret" >&3
+		return $rc
+	fi
+	echo "[!] Missing WireGuard kernel support ($ret). Falling back to slow userspace implementation." >&3
 	cmd "${WG_QUICK_USERSPACE_IMPLEMENTATION:-wireguard-go}" "$INTERFACE"
 }
 
@@ -157,7 +168,11 @@ if_exists() {
 
 del_if() {
 	[[ $HAVE_SET_DNS -eq 0 ]] || unset_dns
-	cmd rm -f "/var/run/wireguard/$INTERFACE.sock"
+	if [[ -f /var/run/wireguard/$INTERFACE.sock ]]; then
+		cmd rm -f "/var/run/wireguard/$INTERFACE.sock"
+	else
+		cmd ifconfig "$INTERFACE" destroy
+	fi
 	while if_exists; do
 		# HACK: it would be nice to `route monitor` here and wait for RTM_IFANNOUNCE
 		# but it turns out that the announcement is made before the interface
@@ -290,7 +305,6 @@ monitor_daemon() {
 	# endpoints change.
 	while read -r event; do
 		[[ $event == RTM_* ]] || continue
-		[[ -e /var/run/wireguard/$INTERFACE.sock ]] || break
 		if_exists || break
 		[[ $AUTO_ROUTE4 -eq 1 || $AUTO_ROUTE6 -eq 1 ]] && set_endpoint_direct_route
 		# TODO: set the mtu as well, but only if up

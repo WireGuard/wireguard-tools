@@ -129,7 +129,8 @@ static int kernel_get_device(struct wgdevice **device, const char *iface)
 
 		if (wg_peer->p_flags & WG_PEER_HAS_PSK) {
 			memcpy(peer->preshared_key, wg_peer->p_psk, sizeof(peer->preshared_key));
-			peer->flags |= WGPEER_HAS_PRESHARED_KEY;
+			if (!key_is_zero(peer->preshared_key))
+				peer->flags |= WGPEER_HAS_PRESHARED_KEY;
 		}
 
 		if (wg_peer->p_flags & WG_PEER_HAS_PKA) {

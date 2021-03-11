@@ -136,7 +136,8 @@ static int kernel_get_device(struct wgdevice **device, const char *ifname)
 			binary = nvlist_get_binary(nvl_peers[i], "preshared-key", &size);
 			if (binary && size == sizeof(peer->preshared_key)) {
 				memcpy(peer->preshared_key, binary, sizeof(peer->preshared_key));
-				peer->flags |= WGPEER_HAS_PRESHARED_KEY;
+				if (!key_is_zero(peer->preshared_key))
+					peer->flags |= WGPEER_HAS_PRESHARED_KEY;
 			}
 		}
 		if (nvlist_exists_number(nvl_peers[i], "persistent-keepalive-interval")) {

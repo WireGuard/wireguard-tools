@@ -168,7 +168,7 @@ if_exists() {
 
 del_if() {
 	[[ $HAVE_SET_DNS -eq 0 ]] || unset_dns
-	if [[ -f /var/run/wireguard/$INTERFACE.sock ]]; then
+	if [[ -S /var/run/wireguard/$INTERFACE.sock ]]; then
 		cmd rm -f "/var/run/wireguard/$INTERFACE.sock"
 	else
 		cmd ifconfig "$INTERFACE" destroy

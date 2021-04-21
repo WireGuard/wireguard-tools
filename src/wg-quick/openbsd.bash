@@ -266,17 +266,19 @@ monitor_daemon() {
 	echo "[+] Backgrounding route monitor" >&2
 	(trap 'del_routes; exit 0' INT TERM EXIT
 	exec >/dev/null 2>&1
-	local event
+	exec 19< <(exec route -n monitor)
+	local event pid=$!
 	# TODO: this should also check to see if the endpoint actually changes
 	# in response to incoming packets, and then call set_endpoint_direct_route
 	# then too. That function should be able to gracefully cleanup if the
 	# endpoints change.
-	while read -r event; do
+	while read -u 19 -r event; do
 		[[ $event == RTM_* ]] || continue
 		ifconfig "$REAL_INTERFACE" >/dev/null 2>&1 || break
 		[[ $AUTO_ROUTE4 -eq 1 || $AUTO_ROUTE6 -eq 1 ]] && set_endpoint_direct_route
 		# TODO: set the mtu as well, but only if up
-	done < <(route -n monitor)) & disown
+	done
+	kill $pid) & disown
 }
 
 set_dns() {

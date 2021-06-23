@@ -16,6 +16,10 @@ __attribute__((constructor)) static void init(void)
 	DWORD console_mode;
 	HANDLE stdout_handle;
 	WSADATA wsaData;
+
+	if (!SetDllDirectoryA("") || !SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32))
+		abort();
+
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 
 	stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE); // We don't close this.

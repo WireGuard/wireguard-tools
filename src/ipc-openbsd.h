@@ -255,13 +255,12 @@ static int kernel_set_device(struct wgdevice *dev)
 			wg_aip->a_af = aip->family;
 			wg_aip->a_cidr = aip->cidr;
 
-			if (aip->family == AF_INET) {
+			if (aip->family == AF_INET)
 				memcpy(&wg_aip->a_ipv4, &aip->ip4, sizeof(wg_aip->a_ipv4));
-			} else if (aip->family == AF_INET6) {
+			else if (aip->family == AF_INET6)
 				memcpy(&wg_aip->a_ipv6, &aip->ip6, sizeof(wg_aip->a_ipv6));
-			} else {
+			else
 				continue;
-			}
 			++aip_count;
 			++wg_aip;
 		}

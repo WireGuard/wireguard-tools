@@ -113,6 +113,27 @@ err:
 	return NULL;
 }
 
+static bool userspace_has_wireguard_interface(const char *iface)
+{
+	char fname[MAX_PATH];
+	WIN32_FIND_DATA find_data;
+	HANDLE find_handle;
+	bool ret = false;
+
+	snprintf(fname, sizeof(fname), "ProtectedPrefix\\Administrators\\WireGuard\\%s", iface);
+	find_handle = FindFirstFile("\\\\.\\pipe\\*", &find_data);
+	if (find_handle == INVALID_HANDLE_VALUE)
+		return -GetLastError();
+	do {
+		if (!strcmp(fname, find_data.cFileName)) {
+			ret = true;
+			break;
+		}
+	} while (FindNextFile(find_handle, &find_data));
+	FindClose(find_handle);
+	return ret;
+}
+
 static int userspace_get_wireguard_interfaces(struct string_list *list)
 {
 	static const char prefix[] = "ProtectedPrefix\\Administrators\\WireGuard\\";

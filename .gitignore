@@ -1,6 +1,9 @@
 cscope.out
 *.o
 *.d
+*.lib
+*.dll
+*.gch
 *.dwo
 src/wg
 src/wg.exe

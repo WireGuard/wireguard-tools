@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <fcntl.h>
+#include <hashtable.h>
 
 static FILE *userspace_interface_file(const char *iface)
 {
@@ -113,6 +114,9 @@ err:
 	return NULL;
 }
 
+static bool have_cached_interfaces;
+static struct hashtable cached_interfaces;
+
 static bool userspace_has_wireguard_interface(const char *iface)
 {
 	char fname[MAX_PATH];
@@ -120,10 +124,13 @@ static bool userspace_has_wireguard_interface(const char *iface)
 	HANDLE find_handle;
 	bool ret = false;
 
+	if (have_cached_interfaces)
+		return hashtable_find_entry(&cached_interfaces, iface) != NULL;
+
 	snprintf(fname, sizeof(fname), "ProtectedPrefix\\Administrators\\WireGuard\\%s", iface);
 	find_handle = FindFirstFile("\\\\.\\pipe\\*", &find_data);
 	if (find_handle == INVALID_HANDLE_VALUE)
-		return -GetLastError();
+		return -EIO;
 	do {
 		if (!strcmp(fname, find_data.cFileName)) {
 			ret = true;
@@ -139,18 +146,25 @@ static int userspace_get_wireguard_interfaces(struct string_list *list)
 	static const char prefix[] = "ProtectedPrefix\\Administrators\\WireGuard\\";
 	WIN32_FIND_DATA find_data;
 	HANDLE find_handle;
+	char *iface;
 	int ret = 0;
 
 	find_handle = FindFirstFile("\\\\.\\pipe\\*", &find_data);
 	if (find_handle == INVALID_HANDLE_VALUE)
-		return -GetLastError();
+		return -EIO;
 	do {
 		if (strncmp(prefix, find_data.cFileName, strlen(prefix)))
 			continue;
-		ret = string_list_add(list, find_data.cFileName + strlen(prefix));
+		iface = find_data.cFileName + strlen(prefix);
+		ret = string_list_add(list, iface);
 		if (ret < 0)
 			goto out;
+		if (!hashtable_find_or_insert_entry(&cached_interfaces, iface)) {
+			ret = -errno;
+			goto out;
+		}
 	} while (FindNextFile(find_handle, &find_data));
+	have_cached_interfaces = true;
 
 out:
 	FindClose(find_handle);

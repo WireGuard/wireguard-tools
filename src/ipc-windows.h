@@ -13,12 +13,17 @@
 #include <ddk/ndisguid.h>
 #include <nci.h>
 #include <wireguard.h>
+#include <hashtable.h>
 
 #define IPC_SUPPORTS_KERNEL_INTERFACE
+
+static bool have_cached_kernel_interfaces;
+static struct hashtable cached_kernel_interfaces;
 
 static int kernel_get_wireguard_interfaces(struct string_list *list)
 {
 	HDEVINFO dev_info = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, NULL, NULL, DIGCF_PRESENT, NULL, NULL, NULL);
+	bool will_have_cached_kernel_interfaces = true;
 
 	if (dev_info == INVALID_HANDLE_VALUE) {
 		errno = EACCES;
@@ -33,6 +38,7 @@ static int kernel_get_wireguard_interfaces(struct string_list *list)
 		HKEY key;
 		GUID instance_id;
 		char *interface_name;
+		struct hashtable_entry *entry;
 
 		if (!SetupDiEnumDeviceInfo(dev_info, i, &dev_info_data)) {
 			if (GetLastError() == ERROR_NO_MORE_ITEMS)
@@ -105,7 +111,25 @@ static int kernel_get_wireguard_interfaces(struct string_list *list)
 		}
 
 		string_list_add(list, interface_name);
+
+		entry = hashtable_find_or_insert_entry(&cached_kernel_interfaces, interface_name);
 		free(interface_name);
+		if (!entry)
+			goto cleanup_entry;
+
+		if (SetupDiGetDeviceInstanceIdW(dev_info, &dev_info_data, NULL, 0, &buf_len) || GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+			goto cleanup_entry;
+		entry->value = calloc(sizeof(WCHAR), buf_len);
+		if (!entry->value)
+			goto cleanup_entry;
+		if (!SetupDiGetDeviceInstanceIdW(dev_info, &dev_info_data, entry->value, buf_len, &buf_len)) {
+			free(entry->value);
+			entry->value = NULL;
+			goto cleanup_entry;
+		}
+
+cleanup_entry:
+		will_have_cached_kernel_interfaces |= entry != NULL && entry->value != NULL;
 cleanup_buf:
 		free(buf);
 cleanup_key:
@@ -113,15 +137,48 @@ cleanup_key:
 skip:;
 	}
 	SetupDiDestroyDeviceInfoList(dev_info);
+	have_cached_kernel_interfaces = will_have_cached_kernel_interfaces;
 	return 0;
 }
 
 static HANDLE kernel_interface_handle(const char *iface)
 {
-	HDEVINFO dev_info = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, NULL, NULL, DIGCF_PRESENT, NULL, NULL, NULL);
+	HDEVINFO dev_info;
 	WCHAR *interfaces = NULL;
 	HANDLE handle;
 
+	if (have_cached_kernel_interfaces) {
+		struct hashtable_entry *entry = hashtable_find_entry(&cached_kernel_interfaces, iface);
+		if (entry) {
+			DWORD buf_len;
+			if (CM_Get_Device_Interface_List_SizeW(
+				&buf_len, (GUID *)&GUID_DEVINTERFACE_NET, (DEVINSTID_W)entry->value,
+				CM_GET_DEVICE_INTERFACE_LIST_PRESENT) != CR_SUCCESS)
+				goto err_hash;
+			interfaces = calloc(buf_len, sizeof(*interfaces));
+			if (!interfaces)
+				goto err_hash;
+			if (CM_Get_Device_Interface_ListW(
+				(GUID *)&GUID_DEVINTERFACE_NET, (DEVINSTID_W)entry->value, interfaces, buf_len,
+				CM_GET_DEVICE_INTERFACE_LIST_PRESENT) != CR_SUCCESS || !interfaces[0]) {
+				free(interfaces);
+				interfaces = NULL;
+				goto err_hash;
+			}
+			handle = CreateFileW(interfaces, GENERIC_READ | GENERIC_WRITE,
+					     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+					     OPEN_EXISTING, 0, NULL);
+			free(interfaces);
+			if (handle == INVALID_HANDLE_VALUE)
+				goto err_hash;
+			return handle;
+err_hash:
+			errno = EACCES;
+			return NULL;
+		}
+	}
+
+	dev_info = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, NULL, NULL, DIGCF_PRESENT, NULL, NULL, NULL);
 	if (dev_info == INVALID_HANDLE_VALUE)
 		return NULL;
 

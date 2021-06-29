@@ -37,6 +37,7 @@ static int kernel_get_wireguard_interfaces(struct string_list *list)
 		SP_DEVINFO_DATA dev_info_data = { .cbSize = sizeof(SP_DEVINFO_DATA) };
 		HKEY key;
 		GUID instance_id;
+		ULONG status, problem_code;
 		char *interface_name;
 		struct hashtable_entry *entry;
 
@@ -110,7 +111,9 @@ static int kernel_get_wireguard_interfaces(struct string_list *list)
 			goto cleanup_buf;
 		}
 
-		string_list_add(list, interface_name);
+		if (CM_Get_DevNode_Status(&status, &problem_code, dev_info_data.DevInst, 0) == CR_SUCCESS &&
+		    (status & (DN_DRIVER_LOADED | DN_STARTED)) == (DN_DRIVER_LOADED | DN_STARTED))
+			string_list_add(list, interface_name);
 
 		entry = hashtable_find_or_insert_entry(&cached_kernel_interfaces, interface_name);
 		free(interface_name);

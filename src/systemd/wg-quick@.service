@@ -15,7 +15,7 @@ Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/bin/wg-quick up %i
 ExecStop=/usr/bin/wg-quick down %i
-ExecReload=/bin/bash -c 'exec /usr/bin/wg syncconf %i <(exec /usr/bin/wg-quick strip %i)'
+ExecReload=/bin/bash -c 'exec /usr/bin/wg syncconf %i <(exec /usr/bin/wg-quick strip-and-eval %i)'
 Environment=WG_ENDPOINT_RESOLUTION_RETRIES=infinity
 
 [Install]

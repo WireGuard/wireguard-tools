@@ -13,6 +13,8 @@ wg-quick - set up a WireGuard interface simply
 .I save
 |
 .I strip
+|
+.I strip-and-eval
 ] [
 .I CONFIG_FILE
 |
@@ -34,6 +36,7 @@ with all
 .BR wg-quick (8)-specific
 options removed, suitable for use with
 .BR wg (8).
+Use \fIstrip-and-eval\fP in case you use `PostUp' to read PrivateKey or PresharedKey from a file or command and need them in the output.
 
 \fICONFIG_FILE\fP is a configuration file, whose filename is the interface name
 followed by `.conf'. Otherwise, \fIINTERFACE\fP is an interface name, with configuration
@@ -255,6 +258,12 @@ The \fIstrip\fP command is useful for reloading configuration files without disr
 sessions:
 
 \fB    # wg syncconf wgnet0 <(wg-quick strip wgnet0)\fP
+
+\fIstrip-and-eval\fP additionally extracts PrivateKey and PresharedKey from `PostUp` statements and translates them into configuration that
+.BR wg (8)
+does understand:
+
+\fB    # wg syncconf wgnet0 <(wg-quick strip-and-eval wgnet0)\fP
 
 .SH SEE ALSO
 .BR wg (8),

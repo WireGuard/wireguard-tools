@@ -11,7 +11,6 @@
 #include <initguid.h>
 #include <devguid.h>
 #include <ddk/ndisguid.h>
-#include <nci.h>
 #include <wireguard.h>
 #include <hashtable.h>
 
@@ -19,6 +18,7 @@
 
 static bool have_cached_kernel_interfaces;
 static struct hashtable cached_kernel_interfaces;
+static const DEVPROPKEY devpkey_name = DEVPKEY_WG_NAME;
 
 static int kernel_get_wireguard_interfaces(struct string_list *list)
 {
@@ -32,11 +32,10 @@ static int kernel_get_wireguard_interfaces(struct string_list *list)
 
 	for (DWORD i = 0;; ++i) {
 		bool found = false;
-		DWORD buf_len = 0, value_type, ret;
+		DWORD buf_len = 0, value_type;
 		WCHAR *buf = NULL, adapter_name[MAX_ADAPTER_NAME];
 		SP_DEVINFO_DATA dev_info_data = { .cbSize = sizeof(SP_DEVINFO_DATA) };
-		HKEY key;
-		GUID instance_id;
+		DEVPROPTYPE prop_type;
 		ULONG status, problem_code;
 		char *interface_name;
 		struct hashtable_entry *entry;
@@ -49,11 +48,12 @@ static int kernel_get_wireguard_interfaces(struct string_list *list)
 
 		while (!SetupDiGetDeviceRegistryPropertyW(dev_info, &dev_info_data, SPDRP_HARDWAREID, &value_type, (BYTE *)buf, buf_len, &buf_len)) {
 			free(buf);
+			buf = NULL;
 			if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
-				goto skip;
+				break;
 			buf = malloc(buf_len);
 			if (!buf)
-				goto skip;
+				break;
 		}
 
 		if (!buf || value_type != REG_MULTI_SZ || buf_len < sizeof(*buf) * 2 || buf[buf_len / sizeof(*buf) - 1] || buf[buf_len / sizeof(*buf) - 2]) {
@@ -70,45 +70,25 @@ static int kernel_get_wireguard_interfaces(struct string_list *list)
 		free(buf);
 		if (!found)
 			continue;
-		buf = NULL;
-		buf_len = 0;
 
-		key = SetupDiOpenDevRegKey(dev_info, &dev_info_data, DICS_FLAG_GLOBAL, 0, DIREG_DRV, KEY_QUERY_VALUE);
-		if (key == INVALID_HANDLE_VALUE)
+		if (!SetupDiGetDevicePropertyW(dev_info, &dev_info_data, &devpkey_name,
+					       &prop_type, (PBYTE)adapter_name,
+					       sizeof(adapter_name), NULL, 0) ||
+				prop_type != DEVPROP_TYPE_STRING)
 			continue;
-		buf_len = 39 * sizeof(*buf);
-		buf = malloc(buf_len);
-		if (!buf)
-			continue;
-		while ((ret = RegQueryValueExW(key, L"NetCfgInstanceId", NULL, &value_type, (BYTE *)buf, &buf_len)) != ERROR_SUCCESS) {
-			free(buf);
-			if (ret != ERROR_MORE_DATA)
-				goto cleanup_key;
-			buf = malloc(buf_len);
-			if (!buf)
-				goto cleanup_key;
-		}
-		if (!buf || value_type != REG_SZ || buf_len < sizeof(*buf) || buf[buf_len / sizeof(*buf) - 1])
-			goto cleanup_buf;
-		if (FAILED(CLSIDFromString(buf, &instance_id)))
-			goto cleanup_buf;
-
-		if (NciGetConnectionName(&instance_id, adapter_name, sizeof(adapter_name), NULL) != ERROR_SUCCESS)
-			goto cleanup_buf;
 		adapter_name[_countof(adapter_name) - 1] = L'0';
 		if (!adapter_name[0])
-			goto cleanup_buf;
-
+			continue;
 		buf_len = WideCharToMultiByte(CP_UTF8, 0, adapter_name, -1, NULL, 0, NULL, NULL);
 		if (!buf_len)
-			goto cleanup_buf;
+			continue;
 		interface_name = malloc(buf_len);
 		if (!interface_name)
-			goto cleanup_buf;
+			continue;
 		buf_len = WideCharToMultiByte(CP_UTF8, 0, adapter_name, -1, interface_name, buf_len, NULL, NULL);
 		if (!buf_len) {
 			free(interface_name);
-			goto cleanup_buf;
+			continue;
 		}
 
 		if (CM_Get_DevNode_Status(&status, &problem_code, dev_info_data.DevInst, 0) == CR_SUCCESS &&
@@ -118,26 +98,20 @@ static int kernel_get_wireguard_interfaces(struct string_list *list)
 		entry = hashtable_find_or_insert_entry(&cached_kernel_interfaces, interface_name);
 		free(interface_name);
 		if (!entry)
-			goto cleanup_entry;
+			continue;
 
 		if (SetupDiGetDeviceInstanceIdW(dev_info, &dev_info_data, NULL, 0, &buf_len) || GetLastError() != ERROR_INSUFFICIENT_BUFFER)
-			goto cleanup_entry;
+			continue;
 		entry->value = calloc(sizeof(WCHAR), buf_len);
 		if (!entry->value)
-			goto cleanup_entry;
+			continue;
 		if (!SetupDiGetDeviceInstanceIdW(dev_info, &dev_info_data, entry->value, buf_len, &buf_len)) {
 			free(entry->value);
 			entry->value = NULL;
-			goto cleanup_entry;
+			continue;
 		}
 
-cleanup_entry:
-		will_have_cached_kernel_interfaces |= entry != NULL && entry->value != NULL;
-cleanup_buf:
-		free(buf);
-cleanup_key:
-		RegCloseKey(key);
-skip:;
+		will_have_cached_kernel_interfaces = true;
 	}
 	SetupDiDestroyDeviceInfoList(dev_info);
 	have_cached_kernel_interfaces = will_have_cached_kernel_interfaces;
@@ -187,11 +161,10 @@ err_hash:
 
 	for (DWORD i = 0; !interfaces; ++i) {
 		bool found = false;
-		DWORD buf_len = 0, value_type, ret;
+		DWORD buf_len = 0, value_type;
 		WCHAR *buf = NULL, adapter_name[MAX_ADAPTER_NAME];
 		SP_DEVINFO_DATA dev_info_data = { .cbSize = sizeof(SP_DEVINFO_DATA) };
-		HKEY key;
-		GUID instance_id;
+		DEVPROPTYPE prop_type;
 		char *interface_name;
 
 		if (!SetupDiEnumDeviceInfo(dev_info, i, &dev_info_data)) {
@@ -202,11 +175,12 @@ err_hash:
 
 		while (!SetupDiGetDeviceRegistryPropertyW(dev_info, &dev_info_data, SPDRP_HARDWAREID, &value_type, (BYTE *)buf, buf_len, &buf_len)) {
 			free(buf);
+			buf = NULL;
 			if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
-				goto skip;
+				break;
 			buf = malloc(buf_len);
 			if (!buf)
-				goto skip;
+				break;
 		}
 
 		if (!buf || value_type != REG_MULTI_SZ || buf_len < sizeof(*buf) * 2 || buf[buf_len / sizeof(*buf) - 1] || buf[buf_len / sizeof(*buf) - 2]) {
@@ -223,53 +197,28 @@ err_hash:
 		free(buf);
 		if (!found)
 			continue;
-		found = false;
-		buf = NULL;
-		buf_len = 0;
 
-		key = SetupDiOpenDevRegKey(dev_info, &dev_info_data, DICS_FLAG_GLOBAL, 0, DIREG_DRV, KEY_QUERY_VALUE);
-		if (key == INVALID_HANDLE_VALUE)
+		if (!SetupDiGetDevicePropertyW(dev_info, &dev_info_data, &devpkey_name,
+					       &prop_type, (PBYTE)adapter_name,
+					       sizeof(adapter_name), NULL, 0) ||
+				prop_type != DEVPROP_TYPE_STRING)
 			continue;
-		buf_len = 39 * sizeof(*buf);
-		buf = malloc(buf_len);
-		if (!buf)
-			continue;
-		while ((ret = RegQueryValueExW(key, L"NetCfgInstanceId", NULL, &value_type, (BYTE *)buf, &buf_len)) != ERROR_SUCCESS) {
-			free(buf);
-			if (ret != ERROR_MORE_DATA)
-				goto cleanup_key;
-			buf = malloc(buf_len);
-			if (!buf)
-				goto cleanup_key;
-		}
-		if (!buf || value_type != REG_SZ || buf_len < sizeof(*buf) || buf[buf_len / sizeof(*buf) - 1])
-			goto cleanup_buf;
-		if (FAILED(CLSIDFromString(buf, &instance_id)))
-			goto cleanup_buf;
-
-		if (NciGetConnectionName(&instance_id, adapter_name, sizeof(adapter_name), NULL) != ERROR_SUCCESS)
-			goto cleanup_buf;
 		adapter_name[_countof(adapter_name) - 1] = L'0';
 		if (!adapter_name[0])
-			goto cleanup_buf;
-
+			continue;
 		buf_len = WideCharToMultiByte(CP_UTF8, 0, adapter_name, -1, NULL, 0, NULL, NULL);
 		if (!buf_len)
-			goto cleanup_buf;
+			continue;
 		interface_name = malloc(buf_len);
 		if (!interface_name)
-			goto cleanup_buf;
+			continue;
 		buf_len = WideCharToMultiByte(CP_UTF8, 0, adapter_name, -1, interface_name, buf_len, NULL, NULL);
 		if (!buf_len) {
 			free(interface_name);
-			goto cleanup_buf;
+			continue;
 		}
 		found = !strcmp(interface_name, iface);
 		free(interface_name);
-cleanup_buf:
-		free(buf);
-cleanup_key:
-		RegCloseKey(key);
 		if (!found)
 			continue;
 
@@ -296,7 +245,6 @@ cleanup_key:
 		}
 cleanup_instance_id:
 		free(buf);
-skip:;
 	}
 	SetupDiDestroyDeviceInfoList(dev_info);
 	if (!interfaces) {

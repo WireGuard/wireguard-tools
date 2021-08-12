@@ -194,14 +194,14 @@ collect_gateways() {
 
 	GATEWAY4=""
 	while read -r destination gateway _; do
-		[[ $destination == default ]] || continue
+		[[ $destination == default && $gateway != "link#"* ]] || continue
 		GATEWAY4="$gateway"
 		break
 	done < <(netstat -nr -f inet)
 
 	GATEWAY6=""
 	while read -r destination gateway _; do
-		[[ $destination == default ]] || continue
+		[[ $destination == default && $gateway != "link#"* ]] || continue
 		GATEWAY6="$gateway"
 		break
 	done < <(netstat -nr -f inet6)

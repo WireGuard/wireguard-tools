@@ -49,8 +49,8 @@ parse_options() {
 	shopt -s nocasematch
 	while read -r line || [[ -n $line ]]; do
 		stripped="${line%%\#*}"
-		key="${stripped%%=*}"; key="${key##*([[:space:]])}"; key="${key%%*([[:space:]])}"
-		value="${stripped#*=}"; value="${value##*([[:space:]])}"; value="${value%%*([[:space:]])}"
+		key=$(sed -e 's/=.*$//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' <<< "$stripped")
+		value=$(sed -e 's/^[^=]*=//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' <<< "$stripped")
 		[[ $key == "["* ]] && interface_section=0
 		[[ $key == "[Interface]" ]] && interface_section=1
 		if [[ $interface_section -eq 1 ]]; then

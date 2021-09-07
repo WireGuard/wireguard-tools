@@ -283,15 +283,25 @@ monitor_daemon() {
 
 set_dns() {
 	[[ ${#DNS[@]} -gt 0 ]] || return 0
-	# TODO: this is a horrible way of doing it. Has OpenBSD no resolvconf?
+
+	# TODO: add exclusive support for nameservers
+	if pgrep -qx unwind; then
+		echo "[!] WARNING: unwind will leak DNS queries" >&2
+	elif pgrep -qx resolvd; then
+		echo "[!] WARNING: resolvd may leak DNS queries" >&2
+	else
+		echo "[+] resolvd is not running, DNS will not be configured" >&2
+		return 0
+	fi
+
 	cmd cp /etc/resolv.conf "/etc/resolv.conf.wg-quick-backup.$INTERFACE"
-	{ cmd printf 'nameserver %s\n' "${DNS[@]}"
-	  [[ ${#DNS_SEARCH[@]} -eq 0 ]] || cmd printf 'search %s\n' "${DNS_SEARCH[*]}"
-	} > /etc/resolv.conf
+	[[ ${#DNS_SEARCH[@]} -eq 0 ]] || cmd printf 'search %s\n' "${DNS_SEARCH[*]}" > /etc/resolv.conf
+	route nameserver ${REAL_INTERFACE} ${DNS[@]}
 }
 
 unset_dns() {
 	[[ -f "/etc/resolv.conf.wg-quick-backup.$INTERFACE" ]] || return 0
+	route nameserver ${REAL_INTERFACE}
 	cmd mv "/etc/resolv.conf.wg-quick-backup.$INTERFACE" /etc/resolv.conf
 }
 

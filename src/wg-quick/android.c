@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2015-2020 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+ * Copyright (C) 2015-2021 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
  *
  * This is a shell script written in C. It very intentionally still functions like
  * a shell script, calling out to external executables such as ip(8).
@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/param.h>
+#include <sys/system_properties.h>
 
 #ifndef WG_PACKAGE_NAME
 #define WG_PACKAGE_NAME "com.wireguard.android"
@@ -39,6 +40,7 @@
 
 static bool is_exiting = false;
 static bool binder_available = false;
+static unsigned int sdk_version;
 
 static void *xmalloc(size_t size)
 {
@@ -727,7 +729,7 @@ static void up_if(unsigned int *netid, const char *iface, uint16_t listen_port)
 		cmd("ip6tables -I INPUT 1 -p udp --dport %u -j %s -m comment --comment \"wireguard rule %s\"", listen_port, should_block_ipv6(iface) ? "DROP" : "ACCEPT", iface);
 	}
 	cmd("ip link set up dev %s", iface);
-	cndc("network create %u vpn 1 1", *netid);
+	cndc(sdk_version < 31 ? "network create %u vpn 1 1" : "network create %u vpn 1", *netid);
 	cndc("network interface add %u %s", *netid, iface);
 }
 
@@ -1278,6 +1280,10 @@ int main(int argc, char *argv[])
 	_cleanup_free_ char *excluded_applications = NULL;
 	_cleanup_free_ char *included_applications = NULL;
 	unsigned int mtu;
+	char prop[PROP_VALUE_MAX + 1];
+
+	if (__system_property_get("ro.build.version.sdk", prop))
+		sdk_version = atoi(prop);
 
 	if (argc == 2 && (!strcmp(argv[1], "help") || !strcmp(argv[1], "--help") || !strcmp(argv[1], "-h")))
 		cmd_usage(argv[0]);

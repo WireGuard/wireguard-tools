@@ -19,10 +19,11 @@
 static bool have_cached_kernel_interfaces;
 static struct hashtable cached_kernel_interfaces;
 static const DEVPROPKEY devpkey_name = DEVPKEY_WG_NAME;
+extern bool is_win7;
 
 static int kernel_get_wireguard_interfaces(struct string_list *list)
 {
-	HDEVINFO dev_info = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, NULL, NULL, DIGCF_PRESENT, NULL, NULL, NULL);
+	HDEVINFO dev_info = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, is_win7 ? L"ROOT\\WIREGUARD" : L"SWD\\WireGuard", NULL, DIGCF_PRESENT, NULL, NULL, NULL);
 	bool will_have_cached_kernel_interfaces = true;
 
 	if (dev_info == INVALID_HANDLE_VALUE) {
@@ -31,9 +32,8 @@ static int kernel_get_wireguard_interfaces(struct string_list *list)
 	}
 
 	for (DWORD i = 0;; ++i) {
-		bool found = false;
-		DWORD buf_len = 0, value_type;
-		WCHAR *buf = NULL, adapter_name[MAX_ADAPTER_NAME];
+		DWORD buf_len;
+		WCHAR adapter_name[MAX_ADAPTER_NAME];
 		SP_DEVINFO_DATA dev_info_data = { .cbSize = sizeof(SP_DEVINFO_DATA) };
 		DEVPROPTYPE prop_type;
 		ULONG status, problem_code;
@@ -45,31 +45,6 @@ static int kernel_get_wireguard_interfaces(struct string_list *list)
 				break;
 			continue;
 		}
-
-		while (!SetupDiGetDeviceRegistryPropertyW(dev_info, &dev_info_data, SPDRP_HARDWAREID, &value_type, (BYTE *)buf, buf_len, &buf_len)) {
-			free(buf);
-			buf = NULL;
-			if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
-				break;
-			buf = malloc(buf_len);
-			if (!buf)
-				break;
-		}
-
-		if (!buf || value_type != REG_MULTI_SZ || buf_len < sizeof(*buf) * 2 || buf[buf_len / sizeof(*buf) - 1] || buf[buf_len / sizeof(*buf) - 2]) {
-			free(buf);
-			continue;
-		}
-
-		for (WCHAR *item = buf; *item; item += wcslen(item) + 1) {
-			if (!_wcsicmp(item, L"wireguard")) {
-				found = true;
-				break;
-			}
-		}
-		free(buf);
-		if (!found)
-			continue;
 
 		if (!SetupDiGetDevicePropertyW(dev_info, &dev_info_data, &devpkey_name,
 					       &prop_type, (PBYTE)adapter_name,
@@ -155,14 +130,14 @@ err_hash:
 		}
 	}
 
-	dev_info = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, NULL, NULL, DIGCF_PRESENT, NULL, NULL, NULL);
+	dev_info = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, is_win7 ? L"ROOT\\WIREGUARD" : L"SWD\\WireGuard", NULL, DIGCF_PRESENT, NULL, NULL, NULL);
 	if (dev_info == INVALID_HANDLE_VALUE)
 		return NULL;
 
 	for (DWORD i = 0; !interfaces; ++i) {
-		bool found = false;
-		DWORD buf_len = 0, value_type;
-		WCHAR *buf = NULL, adapter_name[MAX_ADAPTER_NAME];
+		bool found;
+		DWORD buf_len;
+		WCHAR *buf, adapter_name[MAX_ADAPTER_NAME];
 		SP_DEVINFO_DATA dev_info_data = { .cbSize = sizeof(SP_DEVINFO_DATA) };
 		DEVPROPTYPE prop_type;
 		char *interface_name;
@@ -172,31 +147,6 @@ err_hash:
 				break;
 			continue;
 		}
-
-		while (!SetupDiGetDeviceRegistryPropertyW(dev_info, &dev_info_data, SPDRP_HARDWAREID, &value_type, (BYTE *)buf, buf_len, &buf_len)) {
-			free(buf);
-			buf = NULL;
-			if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
-				break;
-			buf = malloc(buf_len);
-			if (!buf)
-				break;
-		}
-
-		if (!buf || value_type != REG_MULTI_SZ || buf_len < sizeof(*buf) * 2 || buf[buf_len / sizeof(*buf) - 1] || buf[buf_len / sizeof(*buf) - 2]) {
-			free(buf);
-			continue;
-		}
-
-		for (WCHAR *item = buf; *item; item += wcslen(item) + 1) {
-			if (!_wcsicmp(item, L"wireguard")) {
-				found = true;
-				break;
-			}
-		}
-		free(buf);
-		if (!found)
-			continue;
 
 		if (!SetupDiGetDevicePropertyW(dev_info, &dev_info_data, &devpkey_name,
 					       &prop_type, (PBYTE)adapter_name,

@@ -202,7 +202,7 @@ static char *bytes(uint64_t b)
 static const char *COMMAND_NAME;
 static void show_usage(void)
 {
-	fprintf(stderr, "Usage: %s %s { <interface> | all | interfaces } [public-key | private-key | listen-port | fwmark | peers | preshared-keys | endpoints | allowed-ips | latest-handshakes | transfer | persistent-keepalive | dump]\n", PROG_NAME, COMMAND_NAME);
+	fprintf(stderr, "Usage: %s %s { <interface> | all | interfaces } [public-key | private-key | listen-port | bind-dev | fwmark | peers | preshared-keys | endpoints | allowed-ips | latest-handshakes | transfer | persistent-keepalive | dump]\n", PROG_NAME, COMMAND_NAME);
 }
 
 static void pretty_print(struct wgdevice *device)
@@ -220,6 +220,8 @@ static void pretty_print(struct wgdevice *device)
 		terminal_printf("  " TERMINAL_BOLD "listening port" TERMINAL_RESET ": %u\n", device->listen_port);
 	if (device->fwmark)
 		terminal_printf("  " TERMINAL_BOLD "fwmark" TERMINAL_RESET ": 0x%x\n", device->fwmark);
+	if (device->bind_dev)
+		terminal_printf("  " TERMINAL_BOLD "bind dev" TERMINAL_RESET ": %s\n", device->bind_dev_name);
 	if (device->first_peer) {
 		sort_peers(device);
 		terminal_printf("\n");
@@ -261,7 +263,11 @@ static void dump_print(struct wgdevice *device, bool with_interface)
 	printf("%s\t", maybe_key(device->public_key, device->flags & WGDEVICE_HAS_PUBLIC_KEY));
 	printf("%u\t", device->listen_port);
 	if (device->fwmark)
-		printf("0x%x\n", device->fwmark);
+		printf("0x%x\t", device->fwmark);
+	else
+		printf("off\t");
+	if (device->bind_dev)
+		printf("%s\n", device->bind_dev_name);
 	else
 		printf("off\n");
 	for_each_wgpeer(device, peer) {
@@ -311,6 +317,17 @@ static bool ugly_print(struct wgdevice *device, const char *param, bool with_int
 			printf("0x%x\n", device->fwmark);
 		else
 			printf("off\n");
+	} else if (!strcmp(param, "bind-dev")) {
+		if (with_interface)
+			printf("%s\t", device->name);
+#ifdef __linux__
+		if (device->bind_dev)
+			printf("%s\n", device->bind_dev_name);
+		else
+			printf("off\n");
+#else
+		printf("(unsupported)\n");
+#endif
 	} else if (!strcmp(param, "endpoints")) {
 		if (with_interface)
 			printf("%s\t", device->name);

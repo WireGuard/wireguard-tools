@@ -32,6 +32,15 @@ struct interface {
 	bool is_wireguard;
 };
 
+static void get_bind_dev_name(char *ifname, const int ifindex)
+{
+       if_indextoname (ifindex, ifname);
+       if (errno) {
+               fprintf(stderr, "Failed to get interface name for BindDev with ID '%d': %s\n", ifindex, strerror(errno));
+               ifname = "ERROR";
+       }
+}
+
 static int parse_linkinfo(const struct nlattr *attr, void *data)
 {
 	struct interface *interface = data;
@@ -165,6 +174,8 @@ again:
 			mnl_attr_put_u16(nlh, WGDEVICE_A_LISTEN_PORT, dev->listen_port);
 		if (dev->flags & WGDEVICE_HAS_FWMARK)
 			mnl_attr_put_u32(nlh, WGDEVICE_A_FWMARK, dev->fwmark);
+		if (dev->flags & WGDEVICE_HAS_BIND_DEV)
+			mnl_attr_put_u32(nlh, WGDEVICE_A_BIND_IFINDEX, dev->bind_dev);
 		if (dev->flags & WGDEVICE_REPLACE_PEERS)
 			flags |= WGDEVICE_F_REPLACE_PEERS;
 		if (flags)
@@ -438,6 +449,15 @@ static int parse_device(const struct nlattr *attr, void *data)
 	case WGDEVICE_A_FWMARK:
 		if (!mnl_attr_validate(attr, MNL_TYPE_U32))
 			device->fwmark = mnl_attr_get_u32(attr);
+		break;
+	case WGDEVICE_A_BIND_IFINDEX:
+		if (!mnl_attr_validate(attr, MNL_TYPE_U32)) {
+			device->bind_dev = mnl_attr_get_u32(attr);
+			if (device->bind_dev) {
+				device->flags |= WGDEVICE_HAS_BIND_DEV;
+				get_bind_dev_name(device->bind_dev_name, device->bind_dev);
+			}
+		}
 		break;
 	case WGDEVICE_A_PEERS:
 		return mnl_attr_parse_nested(attr, parse_peers, device);

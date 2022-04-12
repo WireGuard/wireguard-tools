@@ -63,6 +63,14 @@ static bool sync_conf(struct wgdevice *file)
 	}
 
 	for_each_wgpeer(file, peer) {
+		if (!(peer->flags & WGPEER_HAS_PRESHARED_KEY)) {
+			memset(peer->preshared_key, 0, WG_KEY_LEN);
+			peer->flags |= WGPEER_HAS_PRESHARED_KEY;
+		}
+		if (!(peer->flags & WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL)) {
+			peer->persistent_keepalive_interval = 0;
+			peer->flags |= WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL;
+		}
 		pubkeys[i].pubkey = peer->public_key;
 		pubkeys[i].from_file = true;
 		++i;

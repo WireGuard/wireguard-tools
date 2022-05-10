@@ -855,7 +855,7 @@ static void set_dnses(unsigned int netid, const char *dnses)
 	if (!len)
 		return;
 
-	xregcomp(&regex_ipnothost, "^[a-zA-Z0-9_=+.-]{1,15}$", REG_EXTENDED | REG_NOSUB);
+	xregcomp(&regex_ipnothost, "(^[0-9.]+$)|(^.*:.*$)", REG_EXTENDED | REG_NOSUB);
 	for (char *dns = strtok(mutable, ", \t\n"); dns; dns = strtok(NULL, ", \t\n")) {
 		if (strchr(dns, '\'') || strchr(dns, '\\'))
 			continue;

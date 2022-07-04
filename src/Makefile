@@ -58,6 +58,9 @@ endif
 ifeq ($(PLATFORM),haiku)
 LDLIBS += -lnetwork -lbsd
 endif
+ifeq ($(PLATFORM),sunos)
+LDLIBS += -lnsl -lsocket
+endif
 ifeq ($(PLATFORM),windows)
 CC := x86_64-w64-mingw32-clang
 WINDRES := $(shell $(CC) $(CFLAGS) -print-prog-name=windres 2>/dev/null)

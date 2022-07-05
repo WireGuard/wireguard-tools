@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+<service_bundle type="manifest" name="export">
+  <service name="vpn/wg-quick" type="service" version="0">
+    <!--instance name="default" enabled="false" -->
+    <dependency name="network" grouping="require_all" restart_on="error" type="service">
+      <service_fmri value="svc:/milestone/network:default"/>
+    </dependency>
+    <dependency name="filesystem" grouping="require_all" restart_on="error" type="service">
+      <service_fmri value="svc:/system/filesystem/local"/>
+    </dependency>
+    <exec_method name="start" type="method" exec="/usr/local/bin/wg-quick up %i" timeout_seconds="180">
+      <method_context>
+        <method_credential group="root" user="root"/>
+        <method_environment>
+          <envvar name="WG_QUICK_USERSPACE_IMPLEMENTATION" value="/usr/local/sbin/wireguard"/>
+        </method_environment>
+      </method_context>
+    </exec_method>
+    <exec_method name="stop" type="method" exec="/usr/local/bin/wg-quick down %i" timeout_seconds="180">
+      <method_context>
+        <method_credential group="root" user="root"/>
+        <method_environment>
+          <envvar name="WG_QUICK_USERSPACE_IMPLEMENTATION" value="/usr/local/sbin/wireguard"/>
+        </method_environment>
+      </method_context>
+    </exec_method>
+    <property_group name="application" type="application"/>
+    <property_group name="startd" type="framework">
+      <propval name="duration" type="astring" value="contract"/>
+      <propval name="ignore_error" type="astring" value="core,signal"/>
+    </property_group>
+    <!-- /instance -->
+    <stability value="Evolving"/>
+    <template>
+      <common_name>
+        <loctext xml:lang="C">WireGuard via wg-quick(8)</loctext>
+      </common_name>
+    </template>
+  </service>
+</service_bundle>

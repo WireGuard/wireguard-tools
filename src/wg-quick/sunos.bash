@@ -1,14 +1,13 @@
-#!/usr/local/bin/bash
+#!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-2.0
 #
-# Copyright (C) 2015-2020 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+# Copyright (C) 2015-2023 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 #
 
 set -e -o pipefail
 shopt -s extglob
 export LC_ALL=C
 
-exec 3>&2
 SELF="$(readlink -f "${BASH_SOURCE[0]}")"
 export PATH="${SELF%/*}:$PATH"
 
@@ -29,7 +28,7 @@ PROGRAM="${0##*/}"
 ARGS=( "$@" )
 
 cmd() {
-	echo "[#] $*" >&3
+	echo "[#] $*" >&2
 	"$@"
 }
 
@@ -45,7 +44,7 @@ parse_options() {
 	[[ -e $CONFIG_FILE ]] || die "\`$CONFIG_FILE' does not exist"
 	[[ $CONFIG_FILE =~ (^|/)([a-zA-Z0-9_=+.-]{1,15})\.conf$ ]] || die "The config file must be a valid interface name, followed by .conf"
 	CONFIG_FILE="$(readlink -f "$CONFIG_FILE")"
-	((($(stat -f '0%#p' "$CONFIG_FILE") & $(stat -f '0%#p' "${CONFIG_FILE%/*}") & 0007) == 0)) || echo "Warning: \`$CONFIG_FILE' is world accessible" >&2
+	((($(stat -c '0%#a' "$CONFIG_FILE") & $(stat -c '0%#a' "${CONFIG_FILE%/*}") & 0007) == 0)) || echo "Warning: \`$CONFIG_FILE' is world accessible" >&2
 	INTERFACE="${BASH_REMATCH[2]}"
 	shopt -s nocasematch
 	while read -r line || [[ -n $line ]]; do
@@ -83,37 +82,32 @@ read_bool() {
 }
 
 auto_su() {
-	[[ $UID == 0 ]] || exec doas -- "$BASH" -- "$SELF" "${ARGS[@]}"
+	# Other platforms appear to escalate priviliges silently.
+	# We will just require root permissions.
+	[[ $UID == 0 ]] || die "must be run as root"
 }
 
-
 get_real_interface() {
-	local interface line
-	while IFS= read -r line; do
-		if [[ $line =~ ^([a-z]+[0-9]+):\ .+ ]]; then
-			interface="${BASH_REMATCH[1]}"
-			continue
-		fi
-		if [[ $interface == wg* && $line =~ ^\	description:\ wg-quick:\ (.+) && ${BASH_REMATCH[1]} == "$INTERFACE" ]]; then
-			REAL_INTERFACE="$interface"
-			return 0
-		fi
-	done < <(ifconfig)
-	return 1
+	local interface diff
+	wg show interfaces >/dev/null
+	[[ -f "/var/run/wireguard/$INTERFACE.name" ]] || return 1
+	interface="$(< "/var/run/wireguard/$INTERFACE.name")"
+	[[ -n $interface && -S "/var/run/wireguard/$interface.sock" ]] || return 1
+	diff=$(( $(stat -c %Y "/var/run/wireguard/$interface.sock" 2>/dev/null || echo 200) - $(stat -c %Y "/var/run/wireguard/$INTERFACE.name" 2>/dev/null || echo 100) ))
+	[[ $diff -ge 2 || $diff -le -2 ]] && return 1
+	REAL_INTERFACE="$interface"
+	echo "[+] Interface for $INTERFACE is $REAL_INTERFACE" >&2
+	return 0
 }
 
 add_if() {
-	while true; do
-		local -A existing_ifs="( $(wg show interfaces | sed 's/\([^ ]*\)/[\1]=1/g') )"
-		local index ret
-		for ((index=0; index <= 2147483647; ++index)); do [[ -v existing_ifs[wg$index] ]] || break; done
-		if ret="$(cmd ifconfig wg$index create description "wg-quick: $INTERFACE" 2>&1)"; then
-			REAL_INTERFACE="wg$index"
-			return 0
-		fi
-		[[ $ret == *"ifconfig: SIOCIFCREATE: File exists"* ]] && continue
-		echo "$ret" >&3
-		return 1
+	export WG_TUN_NAME_FILE="/var/run/wireguard/$INTERFACE.name"
+	mkdir -p "/var/run/wireguard/"
+	cmd "${WG_QUICK_USERSPACE_IMPLEMENTATION:-wireguard-go}" tun
+	cmd sleep 0.1
+	get_real_interface
+	until ipadm show-if $REAL_INTERFACE 2>/dev/null | grep -q $REAL_INTERFACE; do
+		cmd sleep 0.1
 	done
 }
 
@@ -143,12 +137,18 @@ del_routes() {
 }
 
 del_if() {
+	local addr
 	unset_dns
-	[[ -n $REAL_INTERFACE ]] && cmd ifconfig $REAL_INTERFACE destroy
+	[[ -n $REAL_INTERFACE ]] && ipadm show-addr -p -o addrobj | grep $REAL_INTERFACE/ | while read addr; do
+		cmd ipadm delete-addr $addr
+	done
+	[[ -z $REAL_INTERFACE ]] || cmd rm -f "/var/run/wireguard/$REAL_INTERFACE.sock"
+	cmd rm -f "/var/run/wireguard/$INTERFACE.name"
 }
 
 up_if() {
-	cmd ifconfig "$REAL_INTERFACE" up
+	# Due to illumos tun driver quirks there is nothing to do here.
+	true
 }
 
 add_addr() {
@@ -160,7 +160,9 @@ add_addr() {
 		family=inet
 		[[ -n $FIRSTADDR4 ]] || FIRSTADDR4="${1%/*}"
 	fi
-	cmd ifconfig "$REAL_INTERFACE" $family "$1" alias
+	# cleanup just in case
+	ipadm delete-addr "$REAL_INTERFACE/$2" &>/dev/null || true
+	cmd ipadm create-addr -t -T static -a "local=$1,remote=${1%/*}" "$REAL_INTERFACE/$2"
 }
 
 set_mtu() {
@@ -283,25 +285,14 @@ monitor_daemon() {
 
 set_dns() {
 	[[ ${#DNS[@]} -gt 0 ]] || return 0
-
-	# TODO: add exclusive support for nameservers
-	if pgrep -qx unwind; then
-		echo "[!] WARNING: unwind will leak DNS queries" >&2
-	elif pgrep -qx resolvd; then
-		echo "[!] WARNING: resolvd may leak DNS queries" >&2
-	else
-		echo "[+] resolvd is not running, DNS will not be configured" >&2
-		return 0
-	fi
-
 	cmd cp /etc/resolv.conf "/etc/resolv.conf.wg-quick-backup.$INTERFACE"
-	[[ ${#DNS_SEARCH[@]} -eq 0 ]] || cmd printf 'search %s\n' "${DNS_SEARCH[*]}" > /etc/resolv.conf
-	route nameserver ${REAL_INTERFACE} ${DNS[@]}
+	{ cmd printf 'nameserver %s\n' "${DNS[@]}"
+	  [[ ${#DNS_SEARCH[@]} -eq 0 ]] || cmd printf 'search %s\n' "${DNS_SEARCH[*]}"
+	} > /etc/resolv.conf
 }
 
 unset_dns() {
 	[[ -f "/etc/resolv.conf.wg-quick-backup.$INTERFACE" ]] || return 0
-	route nameserver ${REAL_INTERFACE}
 	cmd mv "/etc/resolv.conf.wg-quick-backup.$INTERFACE" /etc/resolv.conf
 }
 
@@ -415,14 +406,16 @@ cmd_usage() {
 
 cmd_up() {
 	local i
+	local n=0
 	get_real_interface && die "\`$INTERFACE' already exists as \`$REAL_INTERFACE'"
 	trap 'del_if; del_routes; exit' INT TERM EXIT
 	execute_hooks "${PRE_UP[@]}"
 	add_if
-	set_config
 	for i in "${ADDRESSES[@]}"; do
-		add_addr "$i"
+		add_addr "$i" "$INTERFACE$n"
+		n=$((n + 1))
 	done
+	set_config
 	set_mtu
 	up_if
 	set_dns

@@ -329,6 +329,7 @@ static int kernel_set_device(struct wgdevice *dev)
 			nvlist_destroy(nvl_aips[j]);
 		free(nvl_aips);
 		nvlist_destroy(nvl_peers[i]);
+		nvl_peers[i] = NULL;
 		goto err;
 	}
 	if (i) {
@@ -336,9 +337,11 @@ static int kernel_set_device(struct wgdevice *dev)
 		for (i = 0; i < peer_count; ++i)
 			nvlist_destroy(nvl_peers[i]);
 		free(nvl_peers);
+		nvl_peers = NULL;
 	}
 	wgd.wgd_data = nvlist_pack(nvl_device, &wgd.wgd_size);
 	nvlist_destroy(nvl_device);
+	nvl_device = NULL;
 	if (!wgd.wgd_data)
 		goto err;
 	s = get_dgram_socket();

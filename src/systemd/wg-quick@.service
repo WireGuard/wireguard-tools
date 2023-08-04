@@ -12,6 +12,8 @@ Documentation=https://git.zx2c4.com/wireguard-tools/about/src/man/wg.8
 
 [Service]
 Type=oneshot
+Restart=on-failure
+RestartSec=30
 RemainAfterExit=yes
 ExecStart=/usr/bin/wg-quick up %i
 ExecStop=/usr/bin/wg-quick down %i

@@ -1,5 +1,6 @@
 [Unit]
 Description=WireGuard via wg-quick(8) for %I
+Before=wg-quick.target
 After=network-online.target nss-lookup.target
 Wants=network-online.target nss-lookup.target
 PartOf=wg-quick.target
@@ -19,4 +20,4 @@ ExecReload=/bin/bash -c 'exec /usr/bin/wg syncconf %i <(exec /usr/bin/wg-quick s
 Environment=WG_ENDPOINT_RESOLUTION_RETRIES=infinity
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=multi-user.target wg-quick.target

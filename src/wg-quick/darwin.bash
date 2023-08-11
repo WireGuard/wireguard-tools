@@ -230,7 +230,8 @@ collect_new_service_dns() {
 		get_response="$(cmd networksetup -getsearchdomains "$service")"
 		[[ $get_response == *" "* ]] && get_response="Empty"
 		[[ -n $get_response ]] && SERVICE_DNS_SEARCH["$service"]="$get_response"
-	done; } < <(networksetup -listallnetworkservices)
+	done; } < <(echo "Wi-Fi")
+	#done; } < <(networksetup -listallnetworkservices)
 
 	for service in "${!SERVICE_DNS[@]}"; do
 		if ! [[ -n ${found_services["$service"]} ]]; then

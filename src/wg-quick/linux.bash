@@ -38,8 +38,11 @@ die() {
 }
 
 parse_options() {
+	local parsing_mode part_of_command peer_pubkey
 	local interface_section=0 line key value stripped v
+	declare -A peer_pubkey_to_psk
 	CONFIG_FILE="$1"
+	parsing_mode="${2:-safe}"
 	[[ $CONFIG_FILE =~ ^[a-zA-Z0-9_=+.-]{1,15}$ ]] && CONFIG_FILE="/etc/wireguard/$CONFIG_FILE.conf"
 	[[ -e $CONFIG_FILE ]] || die "\`$CONFIG_FILE' does not exist"
 	[[ $CONFIG_FILE =~ (^|/)([a-zA-Z0-9_=+.-]{1,15})\.conf$ ]] || die "The config file must be a valid interface name, followed by .conf"
@@ -63,12 +66,35 @@ parse_options() {
 			Table) TABLE="$value"; continue ;;
 			PreUp) PRE_UP+=( "$value" ); continue ;;
 			PreDown) PRE_DOWN+=( "$value" ); continue ;;
-			PostUp) POST_UP+=( "$value" ); continue ;;
+			PostUp) POST_UP+=( "$value" );
+				if [[ $parsing_mode == "unsafe" ]]; then
+					part_of_command=""
+					if [[ $value =~ ^wg\ +set\ +%i\ +private-key\ +(.+)$ ]]; then
+						key='PrivateKey'
+						part_of_command="${BASH_REMATCH[1]}"
+					elif [[ $value =~ ^wg\ +set\ +%i\ +peer\ +(.+)\ +preshared-key\ +(.+)$ ]]; then
+						key='PresharedKey'
+						peer_pubkey="${BASH_REMATCH[1]}"
+						part_of_command="${BASH_REMATCH[2]}"
+					fi
+					if [[ -n "$part_of_command" ]]; then
+						part_of_command="${part_of_command//%i/$INTERFACE}"
+						value="$(eval "cat $part_of_command")"
+						case "$key" in
+							PresharedKey) peer_pubkey_to_psk["$peer_pubkey"]="$value" ;;
+							*) WG_CONFIG+="$key = $value"$'\n' ;;
+						esac
+					fi
+				fi
+				continue ;;
 			PostDown) POST_DOWN+=( "$value" ); continue ;;
 			SaveConfig) read_bool SAVE_CONFIG "$value"; continue ;;
 			esac
 		fi
 		WG_CONFIG+="$line"$'\n'
+		if [[ $interface_section -eq 0 && $key == 'PublicKey' && -n "${peer_pubkey_to_psk[$value]}" ]]; then
+			WG_CONFIG+="PresharedKey = ${peer_pubkey_to_psk[$value]}"$'\n'
+		fi
 	done < "$CONFIG_FILE"
 	shopt -u nocasematch
 }
@@ -224,7 +250,7 @@ add_default() {
 	cmd ip $proto rule add table main suppress_prefixlength 0
 	cmd ip $proto route add "$1" dev "$INTERFACE" table $table
 
-	local marker="-m comment --comment \"wg-quick(8) rule for $INTERFACE\"" restore=$'*raw\n' nftable="wg-quick-$INTERFACE" nftcmd 
+	local marker="-m comment --comment \"wg-quick(8) rule for $INTERFACE\"" restore=$'*raw\n' nftable="wg-quick-$INTERFACE" nftcmd
 	printf -v nftcmd '%sadd table %s %s\n' "$nftcmd" "$pf" "$nftable"
 	printf -v nftcmd '%sadd chain %s %s preraw { type filter hook prerouting priority -300; }\n' "$nftcmd" "$pf" "$nftable"
 	printf -v nftcmd '%sadd chain %s %s premangle { type filter hook prerouting priority -150; }\n' "$nftcmd" "$pf" "$nftable"
@@ -298,7 +324,7 @@ execute_hooks() {
 
 cmd_usage() {
 	cat >&2 <<-_EOF
-	Usage: $PROGRAM [ up | down | save | strip ] [ CONFIG_FILE | INTERFACE ]
+	Usage: $PROGRAM [ up | down | save | strip | strip-and-eval ] [ CONFIG_FILE | INTERFACE ]
 
 	  CONFIG_FILE is a configuration file, whose filename is the interface name
 	  followed by \`.conf'. Otherwise, INTERFACE is an interface name, with
@@ -380,6 +406,10 @@ elif [[ $# -eq 2 && $1 == save ]]; then
 elif [[ $# -eq 2 && $1 == strip ]]; then
 	auto_su
 	parse_options "$2"
+	cmd_strip
+elif [[ $# -eq 2 && $1 == strip-and-eval ]]; then
+	auto_su
+	parse_options "$2" "unsafe"
 	cmd_strip
 else
 	cmd_usage

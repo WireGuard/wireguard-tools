@@ -42,6 +42,8 @@ int showconf_main(int argc, const char *argv[])
 		printf("ListenPort = %u\n", device->listen_port);
 	if (device->fwmark)
 		printf("FwMark = 0x%x\n", device->fwmark);
+	if (device->bind_dev)
+		printf("BindDev = %s\n", device->bind_dev_name);
 	if (device->flags & WGDEVICE_HAS_PRIVATE_KEY) {
 		key_to_base64(base64, device->private_key);
 		printf("PrivateKey = %s\n", base64);

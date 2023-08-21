@@ -104,6 +104,30 @@ err:
 	return false;
 }
 
+#ifdef __linux__
+static inline bool parse_bind_dev(uint32_t *bind_dev, char *bind_dev_name, uint32_t *flags, const char *value)
+{
+	if (strlen (value) > IFNAMSIZ) {
+		fprintf(stderr, "BindDev must be shorter or equal to %d chars, found: '%s'\n", IFNAMSIZ, value);
+		return false;
+	}
+
+	snprintf(bind_dev_name, IFNAMSIZ, "%s", value);
+	unsigned int i = if_nametoindex(value);
+	if (errno) {
+		fprintf(stderr, "Failed to get ifIndex for BindDev '%s': %s\n", value, strerror(errno));
+		return false;
+	}
+
+	*flags |= WGDEVICE_HAS_BIND_DEV;
+	*bind_dev = (int) i;
+
+	printf ("bind-dev %s translates to %d\n", value, i);
+
+	return true;
+}
+#endif
+
 static inline bool parse_key(uint8_t key[static WG_KEY_LEN], const char *value)
 {
 	if (!key_from_base64(key, value)) {
@@ -446,6 +470,10 @@ static bool process_line(struct config_ctx *ctx, const char *line)
 			ret = parse_port(&ctx->device->listen_port, &ctx->device->flags, value);
 		else if (key_match("FwMark"))
 			ret = parse_fwmark(&ctx->device->fwmark, &ctx->device->flags, value);
+#ifdef __linux__
+		else if (key_match("BindDev"))
+			ret = parse_bind_dev(&ctx->device->bind_dev, (char *) &ctx->device->bind_dev_name, &ctx->device->flags, value);
+#endif
 		else if (key_match("PrivateKey")) {
 			ret = parse_key(ctx->device->private_key, value);
 			if (ret)
@@ -582,6 +610,13 @@ struct wgdevice *config_read_cmd(const char *argv[], int argc)
 				goto error;
 			argv += 2;
 			argc -= 2;
+#ifdef __linux__
+		} else if (!strcmp(argv[0], "bind-dev") && argc >= 2 && !peer) {
+			if (!parse_bind_dev(&device->bind_dev, (char *) device->bind_dev_name, &device->flags, argv[1]))
+				goto error;
+			argv += 2;
+			argc -= 2;
+#endif
 		} else if (!strcmp(argv[0], "private-key") && argc >= 2 && !peer) {
 			if (!parse_keyfile(device->private_key, argv[1]))
 				goto error;

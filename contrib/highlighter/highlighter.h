@@ -21,6 +21,7 @@ enum highlight_type {
 	HighlightDelimiter,
 #ifndef MOBILE_WGQUICK_SUBSET
 	HighlightTable,
+	HighlightNetNS,
 	HighlightFwMark,
 	HighlightSaveConfig,
 	HighlightCmd,

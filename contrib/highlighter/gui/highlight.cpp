@@ -25,6 +25,7 @@ static QColor colormap[] = {
 	[HighlightDelimiter] = QColor("#7aa6da"),
 #ifndef MOBILE_WGQUICK_SUBSET
 	[HighlightTable] = QColor("#c397d8"),
+	[HighlightNetNS] = QColor("#c397d8"),
 	[HighlightFwMark] = QColor("#c397d8"),
 	[HighlightSaveConfig] = QColor("#c397d8"),
 	[HighlightCmd] = QColor("#969896"),

@@ -92,6 +92,9 @@ special values: `off' disables the creation of routes altogether, and `auto'
 (the default) adds routes to the default table and enables special handling of
 default routes.
 .IP \(bu
+NetNS \(em Controls in which network namespace the WireGuard UDP socket is added to. The
+namespace has to be created before WireGuard use.
+.IP \(bu
 PreUp, PostUp, PreDown, PostDown \(em script snippets which will be executed by
 .BR bash (1)
 before/after setting up/tearing down the interface, most commonly used

@@ -18,6 +18,7 @@ MTU=""
 DNS=( )
 DNS_SEARCH=( )
 TABLE=""
+NETNS=""
 PRE_UP=( )
 POST_UP=( )
 PRE_DOWN=( )
@@ -61,6 +62,7 @@ parse_options() {
 				[[ $v =~ (^[0-9.]+$)|(^.*:.*$) ]] && DNS+=( $v ) || DNS_SEARCH+=( $v )
 			done; continue ;;
 			Table) TABLE="$value"; continue ;;
+			NetNS) NETNS="$value"; continue ;;
 			PreUp) PRE_UP+=( "$value" ); continue ;;
 			PreDown) PRE_DOWN+=( "$value" ); continue ;;
 			PostUp) POST_UP+=( "$value" ); continue ;;
@@ -87,7 +89,18 @@ auto_su() {
 
 add_if() {
 	local ret
-	if ! cmd ip link add "$INTERFACE" type wireguard; then
+	if [[ -n $NETNS ]]; then
+		if ! ip netns pids "${NETNS}" > /dev/null; then
+			ret=$?
+			echo "[!] Target namespace '${NETNS}' not found"
+			exit $ret
+		elif ! cmd ip -n "${NETNS}" link add "$INTERFACE" type wireguard; then
+			ret=$?
+			[[ -e /sys/module/wireguard ]] || ! command -v "${WG_QUICK_USERSPACE_IMPLEMENTATION:-wireguard-go}" >/dev/null && exit $ret
+			echo "[!] Missing WireGuard kernel module. Falling back to slow userspace implementation."
+		fi
+		cmd ip -n "${NETNS}" link set "$INTERFACE" netns 1
+	elif ! cmd ip link add "$INTERFACE" type wireguard; then
 		ret=$?
 		[[ -e /sys/module/wireguard ]] || ! command -v "${WG_QUICK_USERSPACE_IMPLEMENTATION:-wireguard-go}" >/dev/null && exit $ret
 		echo "[!] Missing WireGuard kernel module. Falling back to slow userspace implementation." >&2
@@ -263,6 +276,7 @@ save_config() {
 	done < <(resolvconf -l "$(resolvconf_iface_prefix)$INTERFACE" 2>/dev/null || cat "/etc/resolvconf/run/interface/$(resolvconf_iface_prefix)$INTERFACE" 2>/dev/null)
 	[[ -n $MTU && $(ip link show dev "$INTERFACE") =~ mtu\ ([0-9]+) ]] && new_config+="MTU = ${BASH_REMATCH[1]}"$'\n'
 	[[ -n $TABLE ]] && new_config+="Table = $TABLE"$'\n'
+	[[ -n $NETNS ]] && new_config+="NetNS = $NETNS"$'\n'
 	[[ $SAVE_CONFIG -eq 0 ]] || new_config+=$'SaveConfig = true\n'
 	for cmd in "${PRE_UP[@]}"; do
 		new_config+="PreUp = $cmd"$'\n'

@@ -17,7 +17,11 @@
 #define SOCK_PATH RUNSTATEDIR "/wireguard/"
 #define SOCK_SUFFIX ".sock"
 
-static FILE *userspace_interface_file(const char *iface)
+#ifdef __APPLE__
+#define NET_EXT_APP_ID "com.wireguard.macos.network-extension"
+#endif
+
+static FILE *userspace_interface_file_at(const char *iface, const char *sock_path)
 {
 	struct stat sbuf;
 	struct sockaddr_un addr = { .sun_family = AF_UNIX };
@@ -27,7 +31,7 @@ static FILE *userspace_interface_file(const char *iface)
 	errno = EINVAL;
 	if (strchr(iface, '/'))
 		goto out;
-	ret = snprintf(addr.sun_path, sizeof(addr.sun_path), SOCK_PATH "%s" SOCK_SUFFIX, iface);
+	ret = snprintf(addr.sun_path, sizeof(addr.sun_path), "%s%s" SOCK_SUFFIX, sock_path, iface);
 	if (ret < 0)
 		goto out;
 	ret = stat(addr.sun_path, &sbuf);
@@ -61,7 +65,23 @@ out:
 	return f;
 }
 
-static bool userspace_has_wireguard_interface(const char *iface)
+static FILE *userspace_interface_file(const char *iface) {
+	FILE *ret = userspace_interface_file_at(iface, SOCK_PATH);
+	#ifdef __APPLE__
+	if (ret) {
+		return ret;
+	}
+	char sock_path[PATH_MAX];
+	if (snprintf(sock_path, sizeof(sock_path), "%s/Library/Containers/" NET_EXT_APP_ID "/Data/", getenv("HOME")) < 0) {
+		return NULL;
+	}
+
+	ret = userspace_interface_file_at(iface, sock_path);
+	#endif
+	return ret;
+}
+
+static bool userspace_has_wireguard_interface_at(const char *iface, const char *sock_path)
 {
 	struct stat sbuf;
 	struct sockaddr_un addr = { .sun_family = AF_UNIX };
@@ -69,7 +89,7 @@ static bool userspace_has_wireguard_interface(const char *iface)
 
 	if (strchr(iface, '/'))
 		return false;
-	if (snprintf(addr.sun_path, sizeof(addr.sun_path), SOCK_PATH "%s" SOCK_SUFFIX, iface) < 0)
+	if (snprintf(addr.sun_path, sizeof(addr.sun_path), "%s%s" SOCK_SUFFIX, sock_path, iface) < 0)
 		return false;
 	if (stat(addr.sun_path, &sbuf) < 0)
 		return false;
@@ -88,7 +108,24 @@ static bool userspace_has_wireguard_interface(const char *iface)
 	return true;
 }
 
-static int userspace_get_wireguard_interfaces(struct string_list *list)
+static bool userspace_has_wireguard_interface(const char *iface)
+{
+	bool ret = userspace_has_wireguard_interface_at(iface, SOCK_PATH);
+	#ifdef __APPLE__
+	if (ret) {
+		return true;
+	}
+	char sock_path[PATH_MAX];
+	if (snprintf(sock_path, sizeof(sock_path), "%s/Library/Containers/" NET_EXT_APP_ID "/Data/", getenv("HOME")) < 0) {
+		return false;
+	}
+
+	ret = userspace_has_wireguard_interface_at(iface, sock_path);
+	#endif
+	return ret;
+}
+
+static int userspace_get_wireguard_interfaces_from(const char *sock_path, struct string_list *list)
 {
 	DIR *dir;
 	struct dirent *ent;
@@ -96,7 +133,7 @@ static int userspace_get_wireguard_interfaces(struct string_list *list)
 	char *end;
 	int ret = 0;
 
-	dir = opendir(SOCK_PATH);
+	dir = opendir(sock_path);
 	if (!dir)
 		return errno == ENOENT ? 0 : -errno;
 	while ((ent = readdir(dir))) {
@@ -115,5 +152,24 @@ static int userspace_get_wireguard_interfaces(struct string_list *list)
 	}
 out:
 	closedir(dir);
+	return ret;
+}
+
+static int userspace_get_wireguard_interfaces(struct string_list *list)
+{
+	int ret = userspace_get_wireguard_interfaces_from(SOCK_PATH, list);
+	#ifdef __APPLE__
+	char sock_path[PATH_MAX];
+	int ret2 = snprintf(sock_path, sizeof(sock_path), "%s/Library/Containers/" NET_EXT_APP_ID "/Data/", getenv("HOME"));
+	if (ret2 < 0) {
+		goto out;
+	}
+
+	ret2 = userspace_get_wireguard_interfaces_from(sock_path, list);
+out:
+	if (ret == 0) {
+		ret = ret2;
+	}
+	#endif
 	return ret;
 }

@@ -163,6 +163,24 @@ again:
 			mnl_attr_put(nlh, WGDEVICE_A_PRIVATE_KEY, sizeof(dev->private_key), dev->private_key);
 		if (dev->flags & WGDEVICE_HAS_LISTEN_PORT)
 			mnl_attr_put_u16(nlh, WGDEVICE_A_LISTEN_PORT, dev->listen_port);
+		if (dev->flags & WGDEVICE_HAS_JC)
+			mnl_attr_put_u16(nlh, WGDEVICE_A_JC, dev->junk_packet_count);
+		if (dev->flags & WGDEVICE_HAS_JMIN)
+			mnl_attr_put_u16(nlh, WGDEVICE_A_JMIN, dev->junk_packet_min_size);
+		if (dev->flags & WGDEVICE_HAS_JMAX)
+			mnl_attr_put_u16(nlh, WGDEVICE_A_JMAX, dev->junk_packet_max_size);
+		if (dev->flags & WGDEVICE_HAS_S1)
+			mnl_attr_put_u16(nlh, WGDEVICE_A_S1, dev->init_packet_junk_size);
+		if (dev->flags & WGDEVICE_HAS_S2)
+			mnl_attr_put_u16(nlh, WGDEVICE_A_S2, dev->response_packet_junk_size);
+		if (dev->flags & WGDEVICE_HAS_H1)
+			mnl_attr_put_u32(nlh, WGDEVICE_A_H1, dev->init_packet_magic_header);
+		if (dev->flags & WGDEVICE_HAS_H2)
+			mnl_attr_put_u32(nlh, WGDEVICE_A_H2, dev->response_packet_magic_header);
+		if (dev->flags & WGDEVICE_HAS_H3)
+			mnl_attr_put_u32(nlh, WGDEVICE_A_H3, dev->underload_packet_magic_header);
+		if (dev->flags & WGDEVICE_HAS_H4)
+			mnl_attr_put_u32(nlh, WGDEVICE_A_H4, dev->transport_packet_magic_header);
 		if (dev->flags & WGDEVICE_HAS_FWMARK)
 			mnl_attr_put_u32(nlh, WGDEVICE_A_FWMARK, dev->fwmark);
 		if (dev->flags & WGDEVICE_REPLACE_PEERS)
@@ -441,6 +459,42 @@ static int parse_device(const struct nlattr *attr, void *data)
 		break;
 	case WGDEVICE_A_PEERS:
 		return mnl_attr_parse_nested(attr, parse_peers, device);
+	case WGDEVICE_HAS_JC:
+		if (!mnl_attr_validate(attr, MNL_TYPE_U16))
+			device->junk_packet_count = mnl_attr_get_u16(attr);
+		break;
+	case WGDEVICE_HAS_JMIN:
+		if (!mnl_attr_validate(attr, MNL_TYPE_U16))
+			device->junk_packet_min_size = mnl_attr_get_u16(attr);
+		break;
+	case WGDEVICE_HAS_JMAX:
+		if (!mnl_attr_validate(attr, MNL_TYPE_U16))
+			device->junk_packet_max_size = mnl_attr_get_u16(attr);
+		break;
+	case WGDEVICE_HAS_S1:
+		if (!mnl_attr_validate(attr, MNL_TYPE_U16))
+			device->init_packet_junk_size = mnl_attr_get_u16(attr);
+		break;
+	case WGDEVICE_HAS_S2:
+		if (!mnl_attr_validate(attr, MNL_TYPE_U16))
+			device->response_packet_junk_size = mnl_attr_get_u16(attr);
+		break;
+	case WGDEVICE_HAS_H1:
+		if (!mnl_attr_validate(attr, MNL_TYPE_U32))
+			device->init_packet_magic_header = mnl_attr_get_u32(attr);
+		break;
+	case WGDEVICE_HAS_H2:
+		if (!mnl_attr_validate(attr, MNL_TYPE_U32))
+			device->response_packet_magic_header = mnl_attr_get_u32(attr);
+		break;
+	case WGDEVICE_HAS_H3:
+		if (!mnl_attr_validate(attr, MNL_TYPE_U32))
+			device->underload_packet_magic_header = mnl_attr_get_u32(attr);
+		break;
+	case WGDEVICE_HAS_H4:
+		if (!mnl_attr_validate(attr, MNL_TYPE_U32))
+			device->transport_packet_magic_header = mnl_attr_get_u32(attr);
+		break;
 	}
 
 	return MNL_CB_OK;

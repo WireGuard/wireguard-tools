@@ -46,6 +46,25 @@ int showconf_main(int argc, const char *argv[])
 		key_to_base64(base64, device->private_key);
 		printf("PrivateKey = %s\n", base64);
 	}
+	if (device->flags & WGDEVICE_HAS_JC)
+		printf("Jc = %u", device->junk_packet_count);
+	if (device->flags & WGDEVICE_HAS_JMIN)
+		printf("Jmin = %u", device->junk_packet_min_size);
+	if (device->flags & WGDEVICE_HAS_JMAX)
+		printf("Jmax = %u", device->junk_packet_max_size);
+	if (device->flags & WGDEVICE_HAS_S1)
+		printf("S1 = %u", device->init_packet_junk_size);
+	if (device->flags & WGDEVICE_HAS_S2)
+		printf("S2 = %u", device->response_packet_junk_size);
+	if (device->flags & WGDEVICE_HAS_H1)
+		printf("H1 = %u", device->init_packet_magic_header);
+	if (device->flags & WGDEVICE_HAS_H2)
+		printf("H2 = %u", device->response_packet_magic_header);
+	if (device->flags & WGDEVICE_HAS_H3)
+		printf("H3 = %u", device->underload_packet_magic_header);
+	if (device->flags & WGDEVICE_HAS_H4)
+		printf("H4 = %u", device->transport_packet_magic_header);
+
 	printf("\n");
 	for_each_wgpeer(device, peer) {
 		key_to_base64(base64, peer->public_key);

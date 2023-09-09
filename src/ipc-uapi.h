@@ -51,6 +51,24 @@ static int userspace_set_device(struct wgdevice *dev)
 		fprintf(f, "fwmark=%u\n", dev->fwmark);
 	if (dev->flags & WGDEVICE_REPLACE_PEERS)
 		fprintf(f, "replace_peers=true\n");
+	if (dev->flags & WGDEVICE_HAS_JC)
+		fprintf(f, "jc=%u\n", dev->junk_packet_count);
+	if (dev->flags & WGDEVICE_HAS_JMIN)
+		fprintf(f, "jmin=%u\n", dev->junk_packet_min_size);
+	if (dev->flags & WGDEVICE_HAS_JMAX)
+		fprintf(f, "jmax=%u\n", dev->junk_packet_max_size);
+	if (dev->flags & WGDEVICE_HAS_S1)
+		fprintf(f, "s1=%u\n", dev->init_packet_junk_size);
+	if (dev->flags & WGDEVICE_HAS_S2)
+		fprintf(f, "s2=%u\n", dev->response_packet_junk_size);
+	if (dev->flags & WGDEVICE_HAS_H1)
+		fprintf(f, "h1=%u\n", dev->init_packet_magic_header);
+	if (dev->flags & WGDEVICE_HAS_H2)
+		fprintf(f, "h2=%u\n", dev->response_packet_magic_header);
+	if (dev->flags & WGDEVICE_HAS_H3)
+		fprintf(f, "h3=%u\n", dev->underload_packet_magic_header);
+	if (dev->flags & WGDEVICE_HAS_H4)
+		fprintf(f, "h4=%u\n", dev->transport_packet_magic_header);
 
 	for_each_wgpeer(dev, peer) {
 		key_to_hex(hex, peer->public_key);
@@ -183,6 +201,33 @@ static int userspace_get_device(struct wgdevice **out, const char *iface)
 		} else if (!peer && !strcmp(key, "fwmark")) {
 			dev->fwmark = NUM(0xffffffffU);
 			dev->flags |= WGDEVICE_HAS_FWMARK;
+		} else if(!peer && !strcmp(key, "jc")) {
+			dev->junk_packet_count = NUM(0xffffU);
+			dev->flags |= WGDEVICE_HAS_JC;
+		} else if(!peer && !strcmp(key, "jmin")) {
+			dev->junk_packet_min_size = NUM(0xffffU);
+			dev->flags |= WGDEVICE_HAS_JMIN;
+		} else if(!peer && !strcmp(key, "jmax")) {
+			dev->junk_packet_max_size = NUM(0xffffU);
+			dev->flags |= WGDEVICE_HAS_JMAX;
+		} else if(!peer && !strcmp(key, "s1")) {
+			dev->init_packet_junk_size = NUM(0xffffU);
+			dev->flags |= WGDEVICE_HAS_S1;
+		} else if(!peer && !strcmp(key, "s2")) {
+			dev->response_packet_junk_size = NUM(0xffffU);
+			dev->flags |= WGDEVICE_HAS_S2;
+		} else if(!peer && !strcmp(key, "h1")) {
+			dev->init_packet_magic_header = NUM(0xffffffffU);
+			dev->flags |= WGDEVICE_HAS_H1;
+		} else if(!peer && !strcmp(key, "h2")) {
+			dev->response_packet_magic_header = NUM(0xffffffffU);
+			dev->flags |= WGDEVICE_HAS_H2;
+		} else if(!peer && !strcmp(key, "h3")) {
+			dev->underload_packet_magic_header = NUM(0xffffffffU);
+			dev->flags |= WGDEVICE_HAS_H3;
+		} else if(!peer && !strcmp(key, "h4")) {
+			dev->transport_packet_magic_header = NUM(0xffffffffU);
+			dev->flags |= WGDEVICE_HAS_H4;
 		} else if (!strcmp(key, "public_key")) {
 			struct wgpeer *new_peer = calloc(1, sizeof(*new_peer));
 

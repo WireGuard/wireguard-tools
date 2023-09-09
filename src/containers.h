@@ -94,6 +94,9 @@ struct wgdevice {
 
 	uint32_t fwmark;
 	uint16_t listen_port;
+
+	struct wgpeer *first_peer, *last_peer;
+	
 	uint16_t junk_packet_count;
 	uint16_t junk_packet_min_size;
 	uint16_t junk_packet_max_size;
@@ -103,8 +106,6 @@ struct wgdevice {
 	uint32_t response_packet_magic_header;
 	uint32_t underload_packet_magic_header;
 	uint32_t transport_packet_magic_header;
-
-	struct wgpeer *first_peer, *last_peer;
 };
 
 #define for_each_wgpeer(__dev, __peer) for ((__peer) = (__dev)->first_peer; (__peer); (__peer) = (__peer)->next_peer)

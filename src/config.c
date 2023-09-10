@@ -661,50 +661,67 @@ struct wgdevice *config_read_cmd(const char *argv[], int argc)
 			device->flags |= WGDEVICE_HAS_PRIVATE_KEY;
 			argv += 2;
 			argc -= 2;
-
 		} else if (!strcmp(argv[0], "jc") && argc >= 2 && !peer) {
 			if (!parse_uint16(&device->junk_packet_count, "jc", argv[1]))
 				goto error;
+			
+			device->flags |= WGDEVICE_HAS_JC;
 			argv += 2;
 			argc -= 2;
 		} else if (!strcmp(argv[0], "jmin") && argc >= 2 && !peer) {
 			if (!parse_uint16(&device->junk_packet_min_size, "jmin", argv[1]))
 				goto error;
+			
+			device->flags |= WGDEVICE_HAS_JMIN;
 			argv += 2;
 			argc -= 2;
 		} else if (!strcmp(argv[0], "jmax") && argc >= 2 && !peer) {
 			if (!parse_uint16(&device->junk_packet_max_size, "jmax", argv[1]))
 				goto error;
+			
+			device->flags |= WGDEVICE_HAS_JMAX;
 			argv += 2;
 			argc -= 2;
 		} else if (!strcmp(argv[0], "s1") && argc >= 2 && !peer) {
 			if (!parse_uint16(&device->init_packet_junk_size, "s1", argv[1]))
 				goto error;
+			
+			device->flags |= WGDEVICE_HAS_S1;
 			argv += 2;
 			argc -= 2;
 		} else if (!strcmp(argv[0], "s2") && argc >= 2 && !peer) {
 			if (!parse_uint16(&device->response_packet_junk_size, "s2", argv[1]))
 				goto error;
+			
+			device->flags |= WGDEVICE_HAS_S2;
 			argv += 2;
 			argc -= 2;
 		} else if (!strcmp(argv[0], "h1") && argc >= 2 && !peer) {
 			if (!parse_uint32(&device->init_packet_magic_header, "h1", argv[1]))
 				goto error;
+			
+			device->flags |= WGDEVICE_HAS_H1;
 			argv += 2;
 			argc -= 2;
 		} else if (!strcmp(argv[0], "h2") && argc >= 2 && !peer) {
 			if (!parse_uint32(&device->response_packet_magic_header, "h2", argv[1]))
 				goto error;
+			
+			device->flags |= WGDEVICE_HAS_H2;
 			argv += 2;
 			argc -= 2;
 		} else if (!strcmp(argv[0], "h3") && argc >= 2 && !peer) {
 			if (!parse_uint32(&device->underload_packet_magic_header, "h3", argv[1]))
 				goto error;
+			
+			device->flags |= WGDEVICE_HAS_H3;
 			argv += 2;
 			argc -= 2;
 		} else if (!strcmp(argv[0], "h4") && argc >= 2 && !peer) {
 			if (!parse_uint32(&device->transport_packet_magic_header, "h4", argv[1]))
 				goto error;
+			
+			device->flags |= WGDEVICE_HAS_H4;
 			argv += 2;
 			argc -= 2;
 		} else if (!strcmp(argv[0], "peer") && argc >= 2) {

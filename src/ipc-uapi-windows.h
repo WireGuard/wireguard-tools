@@ -54,7 +54,6 @@ static struct hashtable cached_interfaces;
 
 static bool userspace_has_wireguard_interface(const char *iface)
 {
-	printf("dafasdf\n");
 	char fname[MAX_PATH];
 	WIN32_FIND_DATA find_data;
 	HANDLE find_handle;

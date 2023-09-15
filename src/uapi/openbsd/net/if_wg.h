@@ -40,8 +40,8 @@ struct wg_aip_io {
 #define WG_PEER_HAS_PUBLIC		(1 << 0)
 #define WG_PEER_HAS_PSK			(1 << 1)
 #define WG_PEER_HAS_PKA			(1 << 2)
-#define WG_PEER_HAS_ENDPOINT		(1 << 3)
-#define WG_PEER_REPLACE_AIPS		(1 << 4)
+#define WG_PEER_HAS_ENDPOINT	(1 << 3)
+#define WG_PEER_REPLACE_AIPS	(1 << 4)
 #define WG_PEER_REMOVE			(1 << 5)
 #define WG_PEER_UPDATE			(1 << 6)
 
@@ -67,16 +67,25 @@ struct wg_peer_io {
 	struct wg_aip_io	p_aips[];
 };
 
-#define WG_INTERFACE_HAS_PUBLIC		(1 << 0)
-#define WG_INTERFACE_HAS_PRIVATE	(1 << 1)
-#define WG_INTERFACE_HAS_PORT		(1 << 2)
-#define WG_INTERFACE_HAS_RTABLE		(1 << 3)
-#define WG_INTERFACE_REPLACE_PEERS	(1 << 4)
+#define WG_INTERFACE_HAS_PUBLIC		 (1 << 0)
+#define WG_INTERFACE_HAS_PRIVATE	 (1 << 1)
+#define WG_INTERFACE_HAS_PORT		 (1 << 2)
+#define WG_INTERFACE_HAS_RTABLE		 (1 << 3)
+#define WG_INTERFACE_REPLACE_PEERS	 (1 << 4)
+#define WG_INTERFACE_DEVICE_HAS_JC 	 (1 << 5)
+#define WG_INTERFACE_DEVICE_HAS_JMIN (1 << 6)
+#define WG_INTERFACE_DEVICE_HAS_JMAX (1 << 7)
+#define WG_INTERFACE_DEVICE_HAS_S1	 (1 << 8)
+#define WG_INTERFACE_DEVICE_HAS_S2	 (1 << 9)
+#define WG_INTERFACE_DEVICE_HAS_H1	 (1 << 10)
+#define WG_INTERFACE_DEVICE_HAS_H2	 (1 << 11)
+#define WG_INTERFACE_DEVICE_HAS_H3	 (1 << 12)
+#define WG_INTERFACE_DEVICE_HAS_H4	 (1 << 13)
 
 struct wg_interface_io {
-	uint8_t			i_flags;
+	uint16_t		i_flags;
 	in_port_t		i_port;
-	int			i_rtable;
+	int				i_rtable;
 	uint8_t			i_public[WG_KEY_LEN];
 	uint8_t			i_private[WG_KEY_LEN];
 	size_t			i_peers_count;

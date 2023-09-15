@@ -110,6 +110,51 @@ static int kernel_get_device(struct wgdevice **device, const char *iface)
 		dev->flags |= WGDEVICE_HAS_PRIVATE_KEY;
 	}
 
+	if (wg_iface->i_flags & WG_INTERFACE_DEVICE_HAS_JC) {
+		dev->junk_packet_count = wg_iface->i_junk_packet_count;
+		dev->flags |= WGDEVICE_HAS_JC;
+	}
+
+	if (wg_iface->i_flags & WG_INTERFACE_DEVICE_HAS_JMIN) {
+		dev->junk_packet_min_size = wg_iface->i_junk_packet_min_size;
+		dev->flags |= WGDEVICE_HAS_JMIN;
+	}
+
+	if (wg_iface->i_flags & WG_INTERFACE_DEVICE_HAS_JMAX) {
+		dev->junk_packet_max_size = wg_iface->i_junk_packet_max_size;
+		dev->flags |= WGDEVICE_HAS_JMAX;
+	}
+
+	if (wg_iface->i_flags & WG_INTERFACE_DEVICE_HAS_S1) {
+		dev->init_packet_junk_size = wg_iface->i_init_packet_junk_size;
+		dev->flags |= WGDEVICE_HAS_S1;
+	}
+
+	if (wg_iface->i_flags & WG_INTERFACE_DEVICE_HAS_S2) {
+		dev->response_packet_junk_size = wg_iface->i_response_packet_junk_size;
+		dev->flags |= WGDEVICE_HAS_S2;
+	}
+
+	if (wg_iface->i_flags & WG_INTERFACE_DEVICE_HAS_H1) {
+		dev->init_packet_magic_header = wg_iface->i_init_packet_magic_header;
+		dev->flags |= WGDEVICE_HAS_H1;
+	}
+
+	if (wg_iface->i_flags & WG_INTERFACE_DEVICE_HAS_H2) {
+		dev->response_packet_magic_header = wg_iface->i_response_packet_magic_header;
+		dev->flags |= WGDEVICE_HAS_H2;
+	}
+
+	if (wg_iface->i_flags & WG_INTERFACE_DEVICE_HAS_H3) {
+		dev->underload_packet_magic_header = wg_iface->i_underload_packet_magic_header;
+		dev->flags |= WGDEVICE_HAS_H3;
+	}
+
+	if (wg_iface->i_flags & WG_INTERFACE_DEVICE_HAS_H4) {
+		dev->transport_packet_magic_header = wg_iface->i_transport_packet_magic_header;
+		dev->flags |= WGDEVICE_HAS_H4;
+	}
+	
 	wg_peer = &wg_iface->i_peers[0];
 	for (size_t i = 0; i < wg_iface->i_peers_count; ++i) {
 		peer = calloc(1, sizeof(*peer));
@@ -220,6 +265,52 @@ static int kernel_set_device(struct wgdevice *dev)
 
 	if (dev->flags & WGDEVICE_REPLACE_PEERS)
 		wg_iface->i_flags |= WG_INTERFACE_REPLACE_PEERS;
+
+
+	if (dev->flags & WGDEVICE_HAS_JC) {
+		wg_iface->i_junk_packet_count = dev->junk_packet_count;
+		wg_iface->i_flags |= WG_INTERFACE_DEVICE_HAS_JC;
+	}
+
+	if (dev->flags & WGDEVICE_HAS_JMIN) {
+		wg_iface->i_junk_packet_min_size = dev->junk_packet_min_size;
+		wg_iface->i_flags |= WG_INTERFACE_DEVICE_HAS_JMIN;
+	}
+
+	if (dev->flags & WGDEVICE_HAS_JMAX) {
+		wg_iface->i_junk_packet_max_size = dev->junk_packet_max_size;
+		wg_iface->i_flags |= WG_INTERFACE_DEVICE_HAS_JMAX;
+	}
+
+	if (dev->flags & WGDEVICE_HAS_S1) {
+		wg_iface->i_init_packet_junk_size = dev->init_packet_junk_size;
+		wg_iface->i_flags |= WG_INTERFACE_DEVICE_HAS_S1;
+	}
+
+	if (dev->flags & WGDEVICE_HAS_S2) {
+		wg_iface->i_response_packet_junk_size = dev->response_packet_junk_size;
+		wg_iface->i_flags |= WG_INTERFACE_DEVICE_HAS_S2;
+	}
+
+	if (dev->flags & WGDEVICE_HAS_H1) {
+		wg_iface->i_init_packet_magic_header = dev->init_packet_magic_header;
+		wg_iface->i_flags |= WG_INTERFACE_DEVICE_HAS_H1;
+	}
+
+	if (dev->flags & WGDEVICE_HAS_H2) {
+		wg_iface->i_response_packet_magic_header = dev->response_packet_magic_header;
+		wg_iface->i_flags |= WG_INTERFACE_DEVICE_HAS_H2;
+	}
+
+	if (dev->flags & WGDEVICE_HAS_H3) {
+		wg_iface->i_underload_packet_magic_header = dev->underload_packet_magic_header;
+		wg_iface->i_flags |= WG_INTERFACE_DEVICE_HAS_H3;
+	}
+
+	if (dev->flags & WGDEVICE_HAS_H4) {
+		wg_iface->i_transport_packet_magic_header = dev->transport_packet_magic_header;
+		wg_iface->i_flags |= WG_INTERFACE_DEVICE_HAS_H4;
+	}
 
 	peer_count = 0;
 	wg_peer = &wg_iface->i_peers[0];

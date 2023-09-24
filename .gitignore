@@ -15,3 +15,8 @@ src/wg.exe
 *.til
 *.pro.user
 maint/
+.deps/
+*.syso
+x64/
+x86/
+arm64/

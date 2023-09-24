@@ -21,7 +21,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         repository: amnezia-vpn/amnezia-wg-tools
-        ref: new_fields_to_config
+        ref: master
         path: windows/wireguard-tools-windows
 
     - name: 'Build WireGuard Tools binary'
@@ -54,7 +54,7 @@ jobs:
         uses: actions/download-artifact@v2
 
       - name: Setup | Checksums
-        run: for file in $(find ./ -name '*.dll' ); do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
+        run: for file in $(find ./ -name '*.exe' ); do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
 
       - name: Zip ALL
         run: for file in *; do zip -r ${file%.*}.zip  $file; done

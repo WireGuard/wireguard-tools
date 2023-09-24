@@ -27,7 +27,7 @@ jobs:
     - name: 'Build WireGuard Tools binary'
       working-directory: windows/wireguard-tools-windows
       run: |
-        cmd /c build.bat
+        cmd /c build.cmd
         mkdir build
         move x64 build\x64
         move x86 build\x86

@@ -220,6 +220,24 @@ static void pretty_print(struct wgdevice *device)
 		terminal_printf("  " TERMINAL_BOLD "listening port" TERMINAL_RESET ": %u\n", device->listen_port);
 	if (device->fwmark)
 		terminal_printf("  " TERMINAL_BOLD "fwmark" TERMINAL_RESET ": 0x%x\n", device->fwmark);
+	if (device->junk_packet_count)
+		terminal_printf("  " TERMINAL_BOLD "jc" TERMINAL_RESET ": %u\n", device->junk_packet_count);
+	if (device->junk_packet_min_size)
+		terminal_printf("  " TERMINAL_BOLD "jmin" TERMINAL_RESET ": %u\n", device->junk_packet_min_size);
+	if (device->junk_packet_max_size)
+		terminal_printf("  " TERMINAL_BOLD "jmax" TERMINAL_RESET ": %u\n", device->junk_packet_max_size);
+	if (device->init_packet_junk_size)
+		terminal_printf("  " TERMINAL_BOLD "s1" TERMINAL_RESET ": %u\n", device->init_packet_junk_size);
+	if (device->response_packet_junk_size)
+		terminal_printf("  " TERMINAL_BOLD "s2" TERMINAL_RESET ": %u\n", device->response_packet_junk_size);
+	if (device->init_packet_magic_header)
+		terminal_printf("  " TERMINAL_BOLD "h1" TERMINAL_RESET ": %u\n", device->init_packet_magic_header);
+	if (device->response_packet_magic_header)
+		terminal_printf("  " TERMINAL_BOLD "h2" TERMINAL_RESET ": %u\n", device->response_packet_magic_header);
+	if (device->underload_packet_magic_header)
+		terminal_printf("  " TERMINAL_BOLD "h3" TERMINAL_RESET ": %u\n", device->underload_packet_magic_header);
+	if (device->transport_packet_magic_header)
+		terminal_printf("  " TERMINAL_BOLD "h4" TERMINAL_RESET ": %u\n", device->transport_packet_magic_header);
 	if (device->first_peer) {
 		sort_peers(device);
 		terminal_printf("\n");
@@ -260,6 +278,15 @@ static void dump_print(struct wgdevice *device, bool with_interface)
 	printf("%s\t", maybe_key(device->private_key, device->flags & WGDEVICE_HAS_PRIVATE_KEY));
 	printf("%s\t", maybe_key(device->public_key, device->flags & WGDEVICE_HAS_PUBLIC_KEY));
 	printf("%u\t", device->listen_port);
+	printf("%u\t", device->junk_packet_count);
+	printf("%u\t", device->junk_packet_min_size);
+	printf("%u\t", device->junk_packet_max_size);
+	printf("%u\t", device->init_packet_junk_size);
+	printf("%u\t", device->response_packet_junk_size);
+	printf("%u\t", device->init_packet_magic_header);
+	printf("%u\t", device->response_packet_magic_header);
+	printf("%u\t", device->underload_packet_magic_header);
+	printf("%u\t", device->transport_packet_magic_header);
 	if (device->fwmark)
 		printf("0x%x\n", device->fwmark);
 	else
@@ -311,7 +338,43 @@ static bool ugly_print(struct wgdevice *device, const char *param, bool with_int
 			printf("0x%x\n", device->fwmark);
 		else
 			printf("off\n");
-	} else if (!strcmp(param, "endpoints")) {
+	} else if(!strcmp(param, "jc")) {
+		if (with_interface)
+			printf("%s\t", device->name);
+		printf("%u\n", device->junk_packet_count);
+	 } else if(!strcmp(param, "jmin")) {
+		if (with_interface)
+			printf("%s\t", device->name);
+		printf("%u\n", device->junk_packet_min_size);
+	 } else if(!strcmp(param, "jmax")) {
+		if (with_interface)
+			printf("%s\t", device->name);
+		printf("%u\n", device->junk_packet_max_size);
+	 } else if(!strcmp(param, "s1")) {
+		if (with_interface)
+			printf("%s\t", device->name);
+		printf("%u\n", device->init_packet_junk_size);
+	 } else if(!strcmp(param, "s2")) {
+		if (with_interface)
+			printf("%s\t", device->name);
+		printf("%u\n", device->response_packet_junk_size);
+	 } else if(!strcmp(param, "h1")) {
+		if (with_interface)
+			printf("%s\t", device->name);
+		printf("%u\n", device->init_packet_magic_header);
+	 } else if(!strcmp(param, "h2")) {
+		if (with_interface)
+			printf("%s\t", device->name);
+		printf("%u\n", device->response_packet_magic_header);
+	 } else if(!strcmp(param, "h3")) {
+		if (with_interface)
+			printf("%s\t", device->name);
+		printf("%u\n", device->underload_packet_magic_header);
+	 } else if(!strcmp(param, "h4")) {
+		if (with_interface)
+			printf("%s\t", device->name);
+		printf("%u\n", device->transport_packet_magic_header);
+	 } else if (!strcmp(param, "endpoints")) {
 		for_each_wgpeer(device, peer) {
 			if (with_interface)
 				printf("%s\t", device->name);

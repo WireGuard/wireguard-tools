@@ -410,6 +410,43 @@ err:
 	return false;
 }
 
+static inline bool parse_uint16(uint16_t *device_value, const char *name, const char *value) {
+
+	if (!strlen(value)) {
+		fprintf(stderr, "Unable to parse empty string\n");
+		return false;
+	}
+	
+	char *end;
+	uint32_t ret;
+	ret = strtoul(value, &end, 10);
+
+	if (*end || ret > UINT16_MAX) {
+		fprintf(stderr, "Unable to parse %s: `%s'\n", name, value);
+		exit(1);
+	}
+	*device_value = (uint16_t)ret;
+	return true;
+}
+
+static inline bool parse_uint32(uint32_t *device_value, const char *name, const char *value) {
+
+	if (!strlen(value)) {
+		fprintf(stderr, "Unable to parse empty string\n");
+		return false;
+	}
+
+	char *end;
+	uint64_t ret;
+	ret = strtoul(value, &end, 10);
+	if (*end || ret > UINT32_MAX) {
+		fprintf(stderr, "Unable to parse %s: `%s'\n", name, value);
+		exit(1);
+	}
+	*device_value = (uint32_t)ret;
+	return true;
+}
+
 static bool process_line(struct config_ctx *ctx, const char *line)
 {
 	const char *value;
@@ -450,6 +487,42 @@ static bool process_line(struct config_ctx *ctx, const char *line)
 			ret = parse_key(ctx->device->private_key, value);
 			if (ret)
 				ctx->device->flags |= WGDEVICE_HAS_PRIVATE_KEY;
+		} else if (key_match("Jc")) {
+			ret = parse_uint16(&ctx->device->junk_packet_count, "Jc", value);
+			if (ret)
+				ctx->device->flags |= WGDEVICE_HAS_JC;
+		} else if (key_match("Jmin")) {
+			ret = parse_uint16(&ctx->device->junk_packet_min_size, "Jmin", value);
+			if (ret)
+				ctx->device->flags |= WGDEVICE_HAS_JMIN;
+		} else if (key_match("Jmax")) {
+			ret = parse_uint16(&ctx->device->junk_packet_max_size, "Jmax", value);
+			if (ret)
+				ctx->device->flags |= WGDEVICE_HAS_JMAX;
+		} else if (key_match("S1")) {
+			ret = parse_uint16(&ctx->device->init_packet_junk_size, "S1", value);
+			if (ret)
+				ctx->device->flags |= WGDEVICE_HAS_S1;
+		} else if (key_match("S2")) {
+			ret = parse_uint16(&ctx->device->response_packet_junk_size, "S2", value);
+			if (ret)
+				ctx->device->flags |= WGDEVICE_HAS_S2;
+		} else if (key_match("H1")) {
+			ret = parse_uint32(&ctx->device->init_packet_magic_header, "H1", value);
+			if (ret)
+				ctx->device->flags |= WGDEVICE_HAS_H1;
+		} else if (key_match("H2")) {
+			ret = parse_uint32(&ctx->device->response_packet_magic_header, "H2", value);
+			if (ret)
+				ctx->device->flags |= WGDEVICE_HAS_H2;
+		} else if (key_match("H3")) {
+			ret = parse_uint32(&ctx->device->underload_packet_magic_header, "H3", value);
+			if (ret)
+				ctx->device->flags |= WGDEVICE_HAS_H3;
+		} else if (key_match("H4")) {
+			ret = parse_uint32(&ctx->device->transport_packet_magic_header, "H4", value);
+			if (ret)
+				ctx->device->flags |= WGDEVICE_HAS_H4;
 		} else
 			goto error;
 	} else if (ctx->is_peer_section) {
@@ -523,7 +596,7 @@ bool config_read_init(struct config_ctx *ctx, bool append)
 		return false;
 	}
 	if (!append)
-		ctx->device->flags |= WGDEVICE_REPLACE_PEERS | WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_FWMARK | WGDEVICE_HAS_LISTEN_PORT;
+		ctx->device->flags |= WGDEVICE_REPLACE_PEERS | WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_FWMARK;
 	return true;
 }
 
@@ -586,6 +659,69 @@ struct wgdevice *config_read_cmd(const char *argv[], int argc)
 			if (!parse_keyfile(device->private_key, argv[1]))
 				goto error;
 			device->flags |= WGDEVICE_HAS_PRIVATE_KEY;
+			argv += 2;
+			argc -= 2;
+		} else if (!strcmp(argv[0], "jc") && argc >= 2 && !peer) {
+			if (!parse_uint16(&device->junk_packet_count, "jc", argv[1]))
+				goto error;
+			
+			device->flags |= WGDEVICE_HAS_JC;
+			argv += 2;
+			argc -= 2;
+		} else if (!strcmp(argv[0], "jmin") && argc >= 2 && !peer) {
+			if (!parse_uint16(&device->junk_packet_min_size, "jmin", argv[1]))
+				goto error;
+			
+			device->flags |= WGDEVICE_HAS_JMIN;
+			argv += 2;
+			argc -= 2;
+		} else if (!strcmp(argv[0], "jmax") && argc >= 2 && !peer) {
+			if (!parse_uint16(&device->junk_packet_max_size, "jmax", argv[1]))
+				goto error;
+			
+			device->flags |= WGDEVICE_HAS_JMAX;
+			argv += 2;
+			argc -= 2;
+		} else if (!strcmp(argv[0], "s1") && argc >= 2 && !peer) {
+			if (!parse_uint16(&device->init_packet_junk_size, "s1", argv[1]))
+				goto error;
+			
+			device->flags |= WGDEVICE_HAS_S1;
+			argv += 2;
+			argc -= 2;
+		} else if (!strcmp(argv[0], "s2") && argc >= 2 && !peer) {
+			if (!parse_uint16(&device->response_packet_junk_size, "s2", argv[1]))
+				goto error;
+			
+			device->flags |= WGDEVICE_HAS_S2;
+			argv += 2;
+			argc -= 2;
+		} else if (!strcmp(argv[0], "h1") && argc >= 2 && !peer) {
+			if (!parse_uint32(&device->init_packet_magic_header, "h1", argv[1]))
+				goto error;
+			
+			device->flags |= WGDEVICE_HAS_H1;
+			argv += 2;
+			argc -= 2;
+		} else if (!strcmp(argv[0], "h2") && argc >= 2 && !peer) {
+			if (!parse_uint32(&device->response_packet_magic_header, "h2", argv[1]))
+				goto error;
+			
+			device->flags |= WGDEVICE_HAS_H2;
+			argv += 2;
+			argc -= 2;
+		} else if (!strcmp(argv[0], "h3") && argc >= 2 && !peer) {
+			if (!parse_uint32(&device->underload_packet_magic_header, "h3", argv[1]))
+				goto error;
+			
+			device->flags |= WGDEVICE_HAS_H3;
+			argv += 2;
+			argc -= 2;
+		} else if (!strcmp(argv[0], "h4") && argc >= 2 && !peer) {
+			if (!parse_uint32(&device->transport_packet_magic_header, "h4", argv[1]))
+				goto error;
+			
+			device->flags |= WGDEVICE_HAS_H4;
 			argv += 2;
 			argc -= 2;
 		} else if (!strcmp(argv[0], "peer") && argc >= 2) {

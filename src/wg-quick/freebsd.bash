@@ -420,8 +420,8 @@ cmd_up() {
 	local i
 	[[ -z $(ifconfig "$INTERFACE" 2>/dev/null) ]] || die "\`$INTERFACE' already exists"
 	trap 'del_if; del_routes; clean_temp; exit' INT TERM EXIT
-	execute_hooks "${PRE_UP[@]}"
 	add_if
+	execute_hooks "${PRE_UP[@]}"
 	set_config
 	for i in "${ADDRESSES[@]}"; do
 		add_addr "$i"

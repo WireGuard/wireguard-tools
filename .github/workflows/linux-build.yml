@@ -1,0 +1,53 @@
+name: Linux
+
+on: [push]
+
+jobs:
+  Build-for-Ubuntu:
+    name: Build for Ubuntu
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Build AmneziaWG tools
+      run: |
+        apt -y update &&
+        apt -y install build-essential &&
+        cd src &&
+        make &&
+        mkdir build &&
+        cp wg ./build/wg &&
+        cp wg-quick/linux.bash ./build/wg-quick
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ubuntu-22.04-amneziawg-tools
+        path: ./src/build
+
+  Build-for-Alpine:
+    name: Build for Alpine
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:3.19
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Build AmneziaWG tools
+      run: |
+        apk add linux-headers build-base &&
+        cd src &&
+        make &&
+        mkdir build &&
+        cp wg ./build/wg &&
+        cp wg-quick/linux.bash ./build/wg-quick
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: alpine-3.19-amneziawg-tools
+        path: ./src/build

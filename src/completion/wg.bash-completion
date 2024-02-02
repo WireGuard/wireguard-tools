@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 # Copyright (C) 2015-2020 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 
-_wg_completion() {
+_awg_completion() {
 	local a
 
 	if [[ $COMP_CWORD -eq 1 ]]; then
@@ -96,4 +96,4 @@ _wg_completion() {
 	COMPREPLY+=( $(compgen -W "${words[*]}" -- "${COMP_WORDS[COMP_CWORD]}") )
 }
 
-complete -o nosort -F _wg_completion wg
+complete -o nosort -F _awg_completion awg

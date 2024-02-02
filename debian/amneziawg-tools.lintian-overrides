@@ -1,0 +1,8 @@
+# upstream prefers the less-user-friendly locked-down /etc/wireguard by default
+# to avoid leaking local system secrets.  I've adjusted the debian package to follow its lead.
+# see also https://bugs.debian.org/902831
+amneziawg-tools: non-standard-dir-perm etc/amneziawg/ 0700 != 0755
+# wg-quick@.service is a generator, not an initscript.  On systems with sysvinit,
+# the admin probably wants to integrate with something like /etc/network/interfaces
+# rather than seeing a new script in /etc/init.d/.
+amneziawg-tools: package-supports-alternative-init-but-no-init.d-script lib/systemd/system/awg-quick@.service

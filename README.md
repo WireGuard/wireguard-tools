@@ -2,8 +2,8 @@
 
 This supplies the main userspace tooling for using and configuring WireGuard
 tunnels, including the
-[`wg(8)`](https://git.zx2c4.com/wireguard-tools/about/src/man/wg.8) and
-[`wg-quick(8)`](https://git.zx2c4.com/wireguard-tools/about/src/man/wg-quick.8)
+[`awg(8)`](https://git.zx2c4.com/wireguard-tools/about/src/man/wg.8) and
+[`awg-quick(8)`](https://git.zx2c4.com/wireguard-tools/about/src/man/wg-quick.8)
 utilities. This project supports Linux, OpenBSD, FreeBSD, macOS, Windows, and
 Android.
 

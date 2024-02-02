@@ -1,0 +1,171 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+LEFT_NS="left_ns"
+LEFT_GW="10.0.5.1/24"
+LEFT_PORT=3001
+LEFT_INT="10.0.1.1/24"
+WG_LEFT_INTERFACE="wg_left"
+WG_LEFT_INTERFACE_CONF="/etc/wireguard/${WG_LEFT_INTERFACE}.conf"
+
+RIGHT_NS="right_ns"
+RIGHT_GW="10.0.5.2/24"
+RIGHT_PORT=3002
+RIGHT_INT="10.0.1.2/24"
+WG_RIGHT_INTERFACE="wg_right"
+WG_RIGHT_INTERFACE_CONF="/etc/wireguard/${WG_RIGHT_INTERFACE}.conf"
+
+cleanup() {
+    if [ $? -ne 0 ]; then
+        echo "Some test failed, here is some debugging"
+        dmesg -T | grep wireguard
+    fi
+    rm -f "${WG_LEFT_INTERFACE_CONF}" "${WG_RIGHT_INTERFACE_CONF}"
+    ip netns delete "${LEFT_NS}" &>/dev/null
+    ip netns delete "${RIGHT_NS}" &>/dev/null
+}
+
+trap cleanup EXIT
+
+
+setup() {
+    umask 0077
+    echo "Generating keys"
+    LEFT_PRIVKEY="$(wg genkey)"
+    RIGHT_PRIVKEY="$(wg genkey)"
+    LEFT_PUBKEY="$(wg pubkey <<<"${LEFT_PRIVKEY}")"
+    RIGHT_PUBKEY="$(wg pubkey <<<"${RIGHT_PRIVKEY}")"
+
+    echo "Generating wireguard config"
+    cat > "${WG_LEFT_INTERFACE_CONF}" <<-EOF
+		[Interface]
+		ListenPort = ${LEFT_PORT}
+		PrivateKey = ${LEFT_PRIVKEY}
+		Address = ${LEFT_GW}
+
+		[Peer]
+		PublicKey = ${RIGHT_PUBKEY}
+		AllowedIPs = ${RIGHT_GW%%/*}/32
+		Endpoint = ${RIGHT_INT%%/*}:${RIGHT_PORT}
+	EOF
+
+    cat > "${WG_RIGHT_INTERFACE_CONF}" <<-EOF
+		[Interface]
+		ListenPort = ${RIGHT_PORT}
+		PrivateKey = ${RIGHT_PRIVKEY}
+		Address = ${RIGHT_GW}
+
+		[Peer]
+		PublicKey = ${LEFT_PUBKEY}
+		AllowedIPs = ${LEFT_GW%%/*}/32
+		Endpoint = ${LEFT_INT%%/*}:${LEFT_PORT}
+	EOF
+
+    echo "Cleaning up old namespaces"
+    ip netns delete "${LEFT_NS}" &> /dev/null || true
+    ip netns delete "${RIGHT_NS}" &> /dev/null || true
+
+    echo "Creating new namespaces ${LEFT_NS} and ${RIGHT_NS} and adding loopback interface to them"
+    ip netns add "${LEFT_NS}"
+    ip netns exec "${LEFT_NS}" ip link set dev lo up
+
+    ip netns add "${RIGHT_NS}"
+    ip netns exec "${RIGHT_NS}" ip link set dev lo up
+
+    echo "Creating veth interface connecting both namespaces"
+    ip link add p1 netns "${LEFT_NS}" type veth peer p2 netns "${RIGHT_NS}"
+    ip -n "${LEFT_NS}" addr add "${LEFT_INT}" dev p1
+    ip -n "${LEFT_NS}" link set p1 up
+
+    ip -n "${RIGHT_NS}" addr add "${RIGHT_INT}" dev p2
+    ip -n "${RIGHT_NS}" link set p2 up
+
+    echo "Bringing up LEFT wireguard interface in namespace ${LEFT_NS}"
+    ip netns exec "${LEFT_NS}" wg-quick up "${WG_LEFT_INTERFACE}"
+
+    echo "Bringing up RIGHT wireguard interface in namespace ${RIGHT_NS}"
+    ip netns exec "${RIGHT_NS}" wg-quick up "${WG_RIGHT_INTERFACE}"
+}
+
+show_config() {
+    echo "${LEFT_NS} namespace:"
+    ip netns exec "${LEFT_NS}" wg showconf "${WG_LEFT_INTERFACE}"
+    echo
+    echo "${RIGHT_NS} namespace:"
+    ip netns exec "${RIGHT_NS}" wg showconf "${WG_RIGHT_INTERFACE}"
+}
+
+test_stats() {
+    local -i ret
+    local output=""
+    # to be run after the ping tests
+    # by now, we MUST have "transfer" and "last handshake"
+    for ns in "${LEFT_NS}" "${RIGHT_NS}"; do
+        echo "Namespace ${ns}"
+        output=$(ip netns exec "${ns}" wg show)
+        echo "${output}" | grep -E "latest handshake:" || {
+            ret=$?
+            echo "Missing \"latest handshake\" from stats in namespace ${ns}"
+            echo "Got this output:"
+            echo "${output}"
+            return $ret
+        }
+        echo "${output}" | grep -E "transfer:.*received.*sent" || {
+            ret=$?
+            echo "Missing \"transfer\" stats in namespace ${ns}"
+            echo "Got this output:"
+            echo "${output}"
+            return $ret
+        }
+    done
+}
+
+test_gw_ping() {
+    echo "Pinging right gateway, from ${LEFT_NS} namespace"
+    ip netns exec "${LEFT_NS}" ping -W 2 -c 1 "${RIGHT_GW%%/*}" || return $?
+    echo
+    echo "Pinging left gateway, from ${RIGHT_NS} namespace"
+    ip netns exec "${RIGHT_NS}" ping -W 2 -c 1 "${LEFT_GW%%/*}" || return $?
+}
+
+test_wireguard_ping() {
+    echo "Pinging right wireguard IP from ${LEFT_NS} namespace"
+    ip netns exec "${LEFT_NS}" ping -W 2 -c 1 "${RIGHT_INT%%/*}" || return $?
+    echo
+    echo "Pinging left wireguard IP from ${RIGHT_NS} namesapce"
+    ip netns exec "${RIGHT_NS}" ping -W 2 -c 1 "${LEFT_INT%%/*}" || return $?
+}
+
+
+echo "Setting things up"
+setup || {
+    echo "Failed vpn test setup"
+    exit 1
+}
+
+echo
+echo "This is the config"
+show_config
+
+echo
+echo "Testing gateway ping"
+test_gw_ping || {
+    echo "Failed gateway ping"
+    exit 1
+}
+
+echo
+echo "Testing wireguard interface ping"
+test_wireguard_ping || {
+    echo "Failed wireguard interface ping"
+    exit 1
+}
+
+echo
+echo "Testing vpn stats"
+test_stats || {
+    echo "Failed to verify vpn stats"
+    exit 1
+}

@@ -1,0 +1,4 @@
+amneziawg-tools-dbgsym_1.0.20210914-1ubuntu2_amd64.ddeb debug optional automatic=yes
+amneziawg-tools_1.0.20210914-1ubuntu2_amd64.deb net optional
+amneziawg_1.0.20210914-1ubuntu2_all.deb net optional
+amneziawg_1.0.20210914-1ubuntu2_amd64.buildinfo net optional

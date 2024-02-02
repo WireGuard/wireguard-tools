@@ -41,7 +41,7 @@ die() {
 
 [[ ${BASH_VERSINFO[0]} -ge 4 ]] || die "Version mismatch: bash ${BASH_VERSINFO[0]} detected, when bash 4+ required"
 
-CONFIG_SEARCH_PATHS=( /etc/wireguard /usr/local/etc/wireguard )
+CONFIG_SEARCH_PATHS=( /etc/amnezia/amneziawg /usr/local/etc/amnezia/amneziawg )
 
 parse_options() {
 	local interface_section=0 line key value stripped path v
@@ -110,10 +110,10 @@ auto_su() {
 get_real_interface() {
 	local interface diff
 	wg show interfaces >/dev/null
-	[[ -f "/var/run/wireguard/$INTERFACE.name" ]] || return 1
-	interface="$(< "/var/run/wireguard/$INTERFACE.name")"
-	[[ -n $interface && -S "/var/run/wireguard/$interface.sock" ]] || return 1
-	diff=$(( $(stat -f %m "/var/run/wireguard/$interface.sock" 2>/dev/null || echo 200) - $(stat -f %m "/var/run/wireguard/$INTERFACE.name" 2>/dev/null || echo 100) ))
+	[[ -f "/var/run/amneziawg/$INTERFACE.name" ]] || return 1
+	interface="$(< "/var/run/amneziawg/$INTERFACE.name")"
+	[[ -n $interface && -S "/var/run/amneziawg/$interface.sock" ]] || return 1
+	diff=$(( $(stat -f %m "/var/run/amneziawg/$interface.sock" 2>/dev/null || echo 200) - $(stat -f %m "/var/run/wireguard/$INTERFACE.name" 2>/dev/null || echo 100) ))
 	[[ $diff -ge 2 || $diff -le -2 ]] && return 1
 	REAL_INTERFACE="$interface"
 	echo "[+] Interface for $INTERFACE is $REAL_INTERFACE" >&2
@@ -121,9 +121,9 @@ get_real_interface() {
 }
 
 add_if() {
-	export WG_TUN_NAME_FILE="/var/run/wireguard/$INTERFACE.name"
-	mkdir -p "/var/run/wireguard/"
-	cmd "${WG_QUICK_USERSPACE_IMPLEMENTATION:-wireguard-go}" utun
+	export WG_TUN_NAME_FILE="/var/run/amneziawg/$INTERFACE.name"
+	mkdir -p "/var/run/amneziawg/"
+	cmd "${WG_QUICK_USERSPACE_IMPLEMENTATION:-amneziawg-go}" utun
 	get_real_interface
 }
 

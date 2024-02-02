@@ -1,0 +1,11 @@
+amneziawg (1.0.20200206-2) unstable; urgency=medium
+
+  As of wireguard-linux-compat and wireguard-dkms version 0.0.20200215-2,
+  we no longer treat installation of the wireguard metapackage as a reason
+  to try to reload the kernel module upon upgrade.
+
+  See the discussion on
+  https://salsa.debian.org/debian/wireguard-linux-compat/merge_requests/2
+  for more details.
+
+ -- Daniel Kahn Gillmor <dkg@fifthhorseman.net>  Mon, 24 Feb 2020 10:08:35 -0500

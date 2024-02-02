@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 
-#define SOCK_PATH RUNSTATEDIR "/wireguard/"
+#define SOCK_PATH RUNSTATEDIR "/amneziawg/"
 #define SOCK_SUFFIX ".sock"
 
 static FILE *userspace_interface_file(const char *iface)

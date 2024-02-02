@@ -1,0 +1,35 @@
+From: Daniel Kahn Gillmor <dkg@fifthhorseman.net>
+Date: Mon, 18 Jun 2018 14:11:10 -0400
+Subject: Avoid requiring glibc 2.25 for wireguard-tools
+
+Upstream's instructions (https://www.wireguard.com/install/) suggest
+enabling the debian unstable repository to run wireguard.
+
+Without this patch, the current version of wireguard-tools will end up
+with a dependency on glibc 2.25 because of the invocation of
+getentropy.
+
+We avoid this situation (and fall through to the syscall interface
+for the Linux kernel) by omitting the test here.
+
+If we move wireguard into testing (and from there to
+stretch-backports) then i think we can convince upstream to change
+their installation instructions to refer to stretch-backports, and we
+can remove this patch.
+---
+ src/genkey.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/genkey.c b/src/genkey.c
+index d1bb643..6cdee42 100644
+--- a/src/genkey.c
++++ b/src/genkey.c
+@@ -40,7 +40,7 @@ static inline bool __attribute__((__warn_unused_result__)) get_random_bytes(uint
+ 		return false;
+ 	}
+ 
+-#if defined(__OpenBSD__) || (defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12) || (defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 25)))
++#if defined(__OpenBSD__) || (defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12)
+ 	if (!getentropy(out, len))
+ 		return true;
+ #endif

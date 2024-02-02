@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 # Copyright (C) 2015-2020 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 
-_wg_quick_completion() {
+_awg_quick_completion() {
 	local p i a search_paths old_glob
 	search_paths=( /etc/wireguard )
 
@@ -27,7 +27,7 @@ _wg_quick_completion() {
 			COMPREPLY+=( "${a[@]}" )
 		elif [[ ${COMP_WORDS[1]} == down ]]; then
 			if [[ $OSTYPE == *openbsd* || $OSTYPE == *darwin* ]]; then
-				for i in /var/run/wireguard/*.name; do
+				for i in /var/run/amneziawg/*.name; do
 					i="${i##*/}"; i="${i%.name}"
 					mapfile -t a < <(compgen -W "$i" -- "${COMP_WORDS[2]}")
 					COMPREPLY+=( "${a[@]}" )
@@ -40,4 +40,4 @@ _wg_quick_completion() {
 	eval "$old_glob"
 }
 
-complete -o filenames -o nosort -F _wg_quick_completion wg-quick
+complete -o filenames -o nosort -F _awg_quick_completion awg-quick

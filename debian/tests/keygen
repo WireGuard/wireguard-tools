@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+[[ $(head -c 32 /dev/zero | base64 | wg pubkey) == "L+V9o0fNYkMVKNqsX7spBzD/9oSvxM/C7ZCZX1jLO3Q=" ]]
+[[ $(wg genpsk) != "$(wg genpsk)" ]]

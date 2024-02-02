@@ -1,0 +1,21 @@
+From: Daniel Kahn Gillmor <dkg@fifthhorseman.net>
+Date: Wed, 15 Jan 2020 11:23:27 -0500
+Subject: Avoid using git during build
+
+---
+ src/Makefile |    4 ----
+ 1 file changed, 4 deletions(-)
+
+--- a/src/Makefile	2021-08-13 17:36:03.385973646 -0400
++++ b/src/Makefile	2021-08-13 17:36:03.369973776 -0400
+@@ -48,10 +48,6 @@
+ ifeq ($(DEBUG),yes)
+ CFLAGS += -g
+ endif
+-WIREGUARD_TOOLS_VERSION = $(patsubst v%,%,$(shell GIT_DIR="$(PWD)/../.git" git describe --dirty 2>/dev/null))
+-ifneq ($(WIREGUARD_TOOLS_VERSION),)
+-CFLAGS += -D'WIREGUARD_TOOLS_VERSION="$(WIREGUARD_TOOLS_VERSION)"'
+-endif
+ ifeq ($(PLATFORM),freebsd)
+ LDLIBS += -lnv
+ endif

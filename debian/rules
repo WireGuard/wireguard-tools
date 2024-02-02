@@ -1,0 +1,38 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/default.mk
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export DEB_VERSION_UPSTREAM
+
+AMNEZIAWG_ARGS = WITH_BASHCOMPLETION=yes WITH_WGQUICK=yes WITH_SYSTEMDUNITS=yes V=1
+
+%:
+	dh $@
+
+override_dh_auto_build-arch:
+	dh_auto_build --sourcedirectory=src -- $(AMNEZIAWG_ARGS)
+
+override_dh_auto_install-arch:
+	$(MAKE) -C src DESTDIR=../debian/amneziawg-tools $(AMNEZIAWG_ARGS) install
+
+override_dh_fixperms:
+	dh_fixperms -Xetc/amnezia
+
+override_dh_installexamples:
+	dh_installexamples -Xexternal-tests
+
+define test_wg
+set -x; set -e; \
+echo "Testing command $1" && \
+a="$$(src/wg $1)" && b="$$(src/wg $1)" && \
+echo "a=$$a b=$$b" && \
+test -n "$$a" && \
+test -n "$$b" && \
+test "$$a" != "$$b"
+endef
+
+override_dh_auto_test:
+	test "$$(head -c 32 /dev/zero | base64 | src/wg pubkey)" = "L+V9o0fNYkMVKNqsX7spBzD/9oSvxM/C7ZCZX1jLO3Q="
+	$(call test_wg,genpsk)
+	$(call test_wg,genkey)

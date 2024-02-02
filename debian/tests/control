@@ -1,0 +1,17 @@
+Tests: keygen
+Restrictions: superficial
+Depends:
+ wireguard-tools,
+
+Tests: wg-quick
+Restrictions: needs-root, isolation-machine, allow-stderr
+Depends:
+ iproute2,
+ @,
+
+Tests: netns-mini
+Restrictions: needs-root, isolation-machine
+Depends:
+ iproute2,
+ iputils-ping,
+ @,

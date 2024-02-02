@@ -1,0 +1,2 @@
+0001-Avoid-using-git-during-build.patch
+0002-Avoid-requiring-glibc-2.25-for-wireguard-tools.patch

@@ -51,3 +51,34 @@ jobs:
       with:
         name: alpine-3.19-amneziawg-tools
         path: ./src/build
+
+  GitHub-Release:
+    name: GitHub Release
+    needs: [Build-for-Ubuntu, Build-for-Alpine]
+    strategy:
+      matrix:
+        include:
+          - os: "ubuntu"
+            release: "22.04"
+          - os: "alpine"
+            release: "3.19"
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Calculate checksums
+        run: for file in $(find ./${{ matrix.os }}-${{ matrix.release }}-amneziawg-tools/ -type f); do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
+        
+      - name: Zip files
+        run: zip -r ${{ matrix.os }}-${{ matrix.release }}-amneziawg-tools.zip ${{ matrix.os }}-${{ matrix.release }}-amneziawg-tools
+
+      - name: Upload binaries to Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./${{ matrix.os }}-${{ matrix.release }}-amneziawg-tools.zip
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true

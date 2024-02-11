@@ -28,7 +28,7 @@
 #include <sys/system_properties.h>
 
 #ifndef WG_PACKAGE_NAME
-#define WG_PACKAGE_NAME "com.wireguard.android"
+#define WG_PACKAGE_NAME "org.amnezia.vpn"
 #endif
 #ifndef WG_CONFIG_SEARCH_PATHS
 #define WG_CONFIG_SEARCH_PATHS "/data/misc/wireguard /data/data/" WG_PACKAGE_NAME "/files"
@@ -1260,23 +1260,23 @@ static void parse_options(char **iface, char **config, unsigned int *mtu, char *
 			} else if (!strncasecmp(clean, "MTU=", 4) && j > 4) {
 				*mtu = atoi(clean + 4);
 				continue;
-			} else if (!strncasecmp(clean, "Jc=", 3) && j > 4 {
+			} else if (!strncasecmp(clean, "Jc=", 3) && j > 4) {
 				is_asecurity_on = true;
-			} else if (!strncasecmp(clean, "Jmin=", 5) && j > 4 {
+			} else if (!strncasecmp(clean, "Jmin=", 5) && j > 4) {
 				is_asecurity_on = true;
-			} else if (!strncasecmp(clean, "Jmax=", 5) && j > 4 {
+			} else if (!strncasecmp(clean, "Jmax=", 5) && j > 4) {
 				is_asecurity_on = true;
-			} else if (!strncasecmp(clean, "S1=", 3) && j > 4 {
+			} else if (!strncasecmp(clean, "S1=", 3) && j > 4) {
 				is_asecurity_on = true;
-			} else if (!strncasecmp(clean, "S2=", 3) && j > 4 {
+			} else if (!strncasecmp(clean, "S2=", 3) && j > 4) {
 				is_asecurity_on = true;
-			} else if (!strncasecmp(clean, "H1=", 3) && j > 4 {
+			} else if (!strncasecmp(clean, "H1=", 3) && j > 4) {
 				is_asecurity_on = true;
-			} else if (!strncasecmp(clean, "H2=", 3) && j > 4 {
+			} else if (!strncasecmp(clean, "H2=", 3) && j > 4) {
 				is_asecurity_on = true;
-			} else if (!strncasecmp(clean, "H3=", 3) && j > 4 {
+			} else if (!strncasecmp(clean, "H3=", 3) && j > 4) {
 				is_asecurity_on = true;
-			} else if (!strncasecmp(clean, "H4=", 3) && j > 4 {
+			} else if (!strncasecmp(clean, "H4=", 3) && j > 4) {
 				is_asecurity_on = true;
 			}
 		}

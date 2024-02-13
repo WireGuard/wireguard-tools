@@ -52,5 +52,6 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: windows-amneziawg-tools.zip
           tag: ${{ github.ref }}
+          release_name: ${{ github.ref_name }}
           overwrite: true
           file_glob: true

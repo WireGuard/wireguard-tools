@@ -27,11 +27,11 @@
 #include <sys/param.h>
 #include <sys/system_properties.h>
 
-#ifndef WG_PACKAGE_NAME
-#define WG_PACKAGE_NAME "org.amnezia.vpn"
+#ifndef AWG_PACKAGE_NAME
+#define AWG_PACKAGE_NAME "org.amnezia.awg"
 #endif
-#ifndef WG_CONFIG_SEARCH_PATHS
-#define WG_CONFIG_SEARCH_PATHS "/data/misc/wireguard /data/data/" WG_PACKAGE_NAME "/files"
+#ifndef AWG_CONFIG_SEARCH_PATHS
+#define AWG_CONFIG_SEARCH_PATHS "/data/misc/amneziawg /data/data/" AWG_PACKAGE_NAME "/files"
 #endif
 
 #define _printf_(x, y) __attribute__((format(printf, x, y)))
@@ -636,7 +636,7 @@ static void add_if(const char *iface)
 	if (is_asecurity_on)
 		cmd("amneziawg-go %s", iface);
 	else
-		cmd("ip link add %s type wireguard", iface);
+		cmd("ip link add %s type amneziawg", iface);
 }
 
 static void del_if(const char *iface)
@@ -648,7 +648,7 @@ static void del_if(const char *iface)
 	regmatch_t matches[2];
 	char *netid = NULL;
 	_cleanup_free_ char *rule_regex = concat("0xc([0-9a-f]+)/0xcffff lookup ", iface, NULL);
-	_cleanup_free_ char *iptables_regex = concat("^-A (.* --comment \"wireguard rule ", iface, "\"[^\n]*)\n*$", NULL);
+	_cleanup_free_ char *iptables_regex = concat("^-A (.* --comment \"amneziawg rule ", iface, "\"[^\n]*)\n*$", NULL);
 
 	xregcomp(&rule_reg, rule_regex, REG_EXTENDED);
 	xregcomp(&iptables_reg, iptables_regex, REG_EXTENDED);
@@ -684,7 +684,7 @@ static bool should_block_ipv6(const char *iface)
 	DEFINE_CMD(c);
 	bool has_ipv6 = false, has_all_none = true;
 
-	for (char *endpoint = cmd_ret(&c, "wg show %s endpoints", iface); endpoint; endpoint = cmd_ret(&c, NULL)) {
+	for (char *endpoint = cmd_ret(&c, "awg show %s endpoints", iface); endpoint; endpoint = cmd_ret(&c, NULL)) {
 		char *start = strchr(endpoint, '\t');
 
 		if (!start)
@@ -705,7 +705,7 @@ static uint16_t determine_listen_port(const char *iface)
 	char *value;
 
 	cmd("ip link set up dev %s", iface);
-	value = cmd_ret(&c, "wg show %s listen-port", iface);
+	value = cmd_ret(&c, "awg show %s listen-port", iface);
 	if (!value)
 		goto set_back_down;
 	listen_port = strtoul(value, NULL, 10);
@@ -725,12 +725,12 @@ static void up_if(unsigned int *netid, const char *iface, uint16_t listen_port)
 	while (*netid < 4096)
 		*netid = random() & 0xfffe;
 
-	cmd("wg set %s fwmark 0x20000", iface);
-	cmd("iptables -I OUTPUT 1 -m mark --mark 0x20000 -j ACCEPT -m comment --comment \"wireguard rule %s\"", iface);
-	cmd("ip6tables -I OUTPUT 1 -m mark --mark 0x20000 -j ACCEPT -m comment --comment \"wireguard rule %s\"", iface);
+	cmd("awg set %s fwmark 0x20000", iface);
+	cmd("iptables -I OUTPUT 1 -m mark --mark 0x20000 -j ACCEPT -m comment --comment \"amneziawg rule %s\"", iface);
+	cmd("ip6tables -I OUTPUT 1 -m mark --mark 0x20000 -j ACCEPT -m comment --comment \"amneziawg rule %s\"", iface);
 	if (listen_port) {
-		cmd("iptables -I INPUT 1 -p udp --dport %u -j ACCEPT -m comment --comment \"wireguard rule %s\"", listen_port, iface);
-		cmd("ip6tables -I INPUT 1 -p udp --dport %u -j %s -m comment --comment \"wireguard rule %s\"", listen_port, should_block_ipv6(iface) ? "DROP" : "ACCEPT", iface);
+		cmd("iptables -I INPUT 1 -p udp --dport %u -j ACCEPT -m comment --comment \"amneziawg rule %s\"", listen_port, iface);
+		cmd("ip6tables -I INPUT 1 -p udp --dport %u -j %s -m comment --comment \"amneziawg rule %s\"", listen_port, should_block_ipv6(iface) ? "DROP" : "ACCEPT", iface);
 	}
 	cmd("ip link set up dev %s", iface);
 	cndc(sdk_version < 31 ? "network create %u vpn 1 1" : "network create %u vpn 1", *netid);
@@ -1011,7 +1011,7 @@ static void set_mtu(const char *iface, unsigned int mtu)
 	if (endpoint_mtu == -1)
 		endpoint_mtu = 1500;
 
-	for (char *endpoint = cmd_ret(&c_endpoints, "wg show %s endpoints", iface); endpoint; endpoint = cmd_ret(&c_endpoints, NULL)) {
+	for (char *endpoint = cmd_ret(&c_endpoints, "awg show %s endpoints", iface); endpoint; endpoint = cmd_ret(&c_endpoints, NULL)) {
 		if (regexec(&regex_endpoint, endpoint, ARRAY_SIZE(matches), matches, 0))
 			continue;
 		endpoint[matches[1].rm_eo] = '\0';
@@ -1034,7 +1034,7 @@ static void set_routes(const char *iface, unsigned int netid)
 {
 	DEFINE_CMD(c);
 
-	for (char *allowedips = cmd_ret(&c, "wg show %s allowed-ips", iface); allowedips; allowedips = cmd_ret(&c, NULL)) {
+	for (char *allowedips = cmd_ret(&c, "awg show %s allowed-ips", iface); allowedips; allowedips = cmd_ret(&c, NULL)) {
 		char *start = strchr(allowedips, '\t');
 
 		if (!start)
@@ -1051,7 +1051,7 @@ static void set_routes(const char *iface, unsigned int netid)
 static void set_config(const char *iface, const char *config)
 {
 	FILE *config_writer;
-	_cleanup_free_ char *cmd = concat("wg setconf ", iface, " /proc/self/fd/0", NULL);
+	_cleanup_free_ char *cmd = concat("awg setconf ", iface, " /proc/self/fd/0", NULL);
 	int ret;
 
 	printf("[#] %s\n", cmd);
@@ -1074,13 +1074,13 @@ static void broadcast_change(void)
 {
 	const char *pkg = getenv("CALLING_PACKAGE");
 
-	if (!pkg || strcmp(pkg, WG_PACKAGE_NAME))
-		cmd("am broadcast -a com.wireguard.android.action.REFRESH_TUNNEL_STATES " WG_PACKAGE_NAME);
+	if (!pkg || strcmp(pkg, AWG_PACKAGE_NAME))
+		cmd("am broadcast -a org.amnezia.awg.action.REFRESH_TUNNEL_STATES " AWG_PACKAGE_NAME);
 }
 
 static void print_search_paths(FILE *file, const char *prefix)
 {
-	_cleanup_free_ char *paths = strdup(WG_CONFIG_SEARCH_PATHS);
+	_cleanup_free_ char *paths = strdup(AWG_CONFIG_SEARCH_PATHS);
 
 	for (char *path = strtok(paths, " "); path; path = strtok(NULL, " "))
 		fprintf(file, "%s%s\n", prefix, path);
@@ -1094,7 +1094,7 @@ static void cmd_usage(const char *program)
 		"  followed by `.conf'. Otherwise, INTERFACE is an interface name, with\n"
 		"  configuration found at:\n\n", program);
 	print_search_paths(stdout, "  - ");
-	printf( "\n  It is to be readable by wg(8)'s `setconf' sub-command, with the exception\n"
+	printf( "\n  It is to be readable by awg(8)'s `setconf' sub-command, with the exception\n"
 		"  of the following additions to the [Interface] section, which are handled by\n"
 		"  this program:\n\n"
 		"  - Address: may be specified one or more times and contains one or more\n"
@@ -1103,7 +1103,7 @@ static void cmd_usage(const char *program)
 		"  - DNS: an optional DNS server to use while the device is up.\n"
 		"  - ExcludedApplications: optional blacklist of applications to exclude from the tunnel.\n\n"
 		"  - IncludedApplications: optional whitelist of applications to include in the tunnel.\n\n"
-		"  See wg-quick(8) for more info and examples.\n");
+		"  See awg-quick(8) for more info and examples.\n");
 }
 
 static char *cleanup_iface = NULL;
@@ -1151,7 +1151,7 @@ static void cmd_down(const char *iface)
 	DEFINE_CMD(c);
 	bool found = false;
 
-	char *ifaces = cmd_ret(&c, "wg show interfaces");
+	char *ifaces = cmd_ret(&c, "awg show interfaces");
 	if (ifaces) {
 		for (char *eiface = strtok(ifaces, " \n"); eiface; eiface = strtok(NULL, " \n")) {
 			if (!strcmp(iface, eiface)) {
@@ -1161,7 +1161,7 @@ static void cmd_down(const char *iface)
 		}
 	}
 	if (!found) {
-		fprintf(stderr, "Error: %s is not a WireGuard interface\n", iface);
+		fprintf(stderr, "Error: %s is not a AmneziaWG interface\n", iface);
 		exit(EMEDIUMTYPE);
 	}
 
@@ -1175,7 +1175,7 @@ static void parse_options(char **iface, char **config, unsigned int *mtu, char *
 	_cleanup_fclose_ FILE *file = NULL;
 	_cleanup_free_ char *line = NULL;
 	_cleanup_free_ char *filename = NULL;
-	_cleanup_free_ char *paths = strdup(WG_CONFIG_SEARCH_PATHS);
+	_cleanup_free_ char *paths = strdup(AWG_CONFIG_SEARCH_PATHS);
 	_cleanup_regfree_ regex_t regex_iface = { 0 }, regex_conf = { 0 };
 	regmatch_t matches[2];
 	struct stat sbuf;

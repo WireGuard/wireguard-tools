@@ -26,7 +26,7 @@ static FILE *userspace_interface_file(const char *iface)
 	if (!CreateWellKnownSid(WinLocalSystemSid, NULL, &expected_sid, &bytes))
 		goto err;
 
-	snprintf(fname, sizeof(fname), "\\\\.\\pipe\\ProtectedPrefix\\Administrators\\WireGuard\\%s", iface);
+	snprintf(fname, sizeof(fname), "\\\\.\\pipe\\ProtectedPrefix\\Administrators\\AmneziaWG\\%s", iface);
 	pipe_handle = CreateFileA(fname, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (pipe_handle == INVALID_HANDLE_VALUE)
 		goto err;
@@ -62,7 +62,7 @@ static bool userspace_has_wireguard_interface(const char *iface)
 	if (have_cached_interfaces)
 		return hashtable_find_entry(&cached_interfaces, iface) != NULL;
 
-	snprintf(fname, sizeof(fname), "ProtectedPrefix\\Administrators\\WireGuard\\%s", iface);
+	snprintf(fname, sizeof(fname), "ProtectedPrefix\\Administrators\\AmneziaWG\\%s", iface);
 	find_handle = FindFirstFile("\\\\.\\pipe\\*", &find_data);
 	if (find_handle == INVALID_HANDLE_VALUE)
 		return -EIO;
@@ -78,7 +78,7 @@ static bool userspace_has_wireguard_interface(const char *iface)
 
 static int userspace_get_wireguard_interfaces(struct string_list *list)
 {
-	static const char prefix[] = "ProtectedPrefix\\Administrators\\WireGuard\\";
+	static const char prefix[] = "ProtectedPrefix\\Administrators\\AmneziaWG\\";
 	WIN32_FIND_DATA find_data;
 	HANDLE find_handle;
 	char *iface;

@@ -9,13 +9,14 @@ extern crate pnet;
 
 use byteorder::{ByteOrder, BigEndian, LittleEndian};
 use crypto::blake2s::Blake2s;
-use snow::NoiseBuilder;
+use snow::{Builder, TransportState}; // Updated import
 use pnet::packet::Packet;
 use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::packet::ipv4::{MutableIpv4Packet, self};
 use pnet::packet::icmp::{MutableIcmpPacket, IcmpTypes, echo_reply, echo_request, self};
 use std::net::*;
 use std::str::FromStr;
+use time::OffsetDateTime; // Updated import
 
 static TEST_SERVER: &'static str = "demo.wireguard.com:12913";
 
@@ -30,17 +31,17 @@ fn main() {
 	let my_private = base64::decode(&"WAmgVYXkbT2bCtdcDwolI88/iVi/aV3/PHcUBTQSYmo=").unwrap();
 	let my_preshared = base64::decode(&"FpCyhws9cxwWoV4xELtfJvjJN+zQVRPISllRWgeopVE=").unwrap();
 
-	let mut noise = NoiseBuilder::new("Noise_IKpsk2_25519_ChaChaPoly_BLAKE2s".parse().unwrap())
+	let mut noise = Builder::new("Noise_IKpsk2_25519_ChaChaPoly_BLAKE2s".parse().unwrap()) // Updated usage
 		.local_private_key(&my_private[..])
 		.remote_public_key(&their_public[..])
 		.prologue("WireGuard v1 zx2c4 Jason@zx2c4.com".as_bytes())
 		.psk(2, &my_preshared[..])
 		.build_initiator().unwrap();
 
-	let now = time::get_time();
+	let now = OffsetDateTime::now_utc(); // Updated usage
 	let mut tai64n = [0; 12];
-	BigEndian::write_i64(&mut tai64n[0..], 4611686018427387914 + now.sec);
-	BigEndian::write_i32(&mut tai64n[8..], now.nsec);
+	BigEndian::write_i64(&mut tai64n[0..], 4611686018427387914 + now.unix_timestamp());
+	BigEndian::write_i32(&mut tai64n[8..], now.nanosecond() as i32);
 	let mut initiation_packet = [0; 148];
 	initiation_packet[0] = 1; /* Type: Initiation */
 	initiation_packet[1] = 0; /* Reserved */
@@ -69,7 +70,7 @@ fn main() {
 	assert!(our_index == 28);
 	let payload_len = noise.read_message(&response_packet[12..60], &mut []).unwrap();
 	assert!(payload_len == 0);
-	noise = noise.into_transport_mode().unwrap();
+	let mut noise_transport: TransportState = noise.into_transport_mode().unwrap(); // Use a new variable for transport mode
 
 	let mut icmp_packet = [0; 48];
 	{
@@ -105,7 +106,7 @@ fn main() {
 	ping_packet[3] = 0; /* Reserved */
 	LittleEndian::write_u32(&mut ping_packet[4..], their_index);
 	LittleEndian::write_u64(&mut ping_packet[8..], 0);
-	noise.write_message(&icmp_packet, &mut ping_packet[16..]).unwrap();
+	noise_transport.write_message(&icmp_packet, &mut ping_packet[16..]).unwrap(); // Use noise_transport here
 	socket.send_to(&ping_packet, TEST_SERVER).unwrap();
 
 	socket.recv_from(&mut ping_packet).unwrap();
@@ -117,7 +118,7 @@ fn main() {
 	assert!(our_index_received == 28);
 	let nonce = LittleEndian::read_u64(&ping_packet[8..]);
 	assert!(nonce == 0);
-	let payload_len = noise.read_message(&ping_packet[16..], &mut icmp_packet).unwrap();
+	let payload_len = noise_transport.read_message(&ping_packet[16..], &mut icmp_packet).unwrap(); // Use noise_transport here
 	assert!(payload_len == 48);
 	let icmp_reply = echo_reply::EchoReplyPacket::new(&icmp_packet[20..37]).unwrap();
 	assert!(icmp_reply.get_icmp_type() == IcmpTypes::EchoReply && icmp_reply.get_icmp_code() == echo_reply::IcmpCodes::NoCode);
@@ -132,6 +133,6 @@ fn main() {
 	LittleEndian::write_u32(&mut keepalive_packet[4..], their_index);
 	LittleEndian::write_u64(&mut keepalive_packet[8..], 1);
 	let empty_payload = [0; 0]; /* Empty payload means keepalive */
-	noise.write_message(&empty_payload, &mut keepalive_packet[16..]).unwrap();
+	noise_transport.write_message(&empty_payload, &mut keepalive_packet[16..]).unwrap(); // Use noise_transport here
 	socket.send_to(&keepalive_packet, TEST_SERVER).unwrap();
 }

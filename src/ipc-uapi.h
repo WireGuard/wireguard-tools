@@ -73,6 +73,10 @@ static int userspace_set_device(struct wgdevice *dev)
 	for_each_wgpeer(dev, peer) {
 		key_to_hex(hex, peer->public_key);
 		fprintf(f, "public_key=%s\n", hex);
+		if (peer->flags & WGPEER_HAS_ADVANCED_SECURITY) {
+			ret = -EINVAL;
+			goto out;
+		}
 		if (peer->flags & WGPEER_REMOVE_ME) {
 			fprintf(f, "remove=true\n");
 			continue;

@@ -111,6 +111,9 @@
  *                                       most recent protocol will be used when
  *                                       this is unset. Otherwise, must be set
  *                                       to 1.
+ *            WGPEER_A_ADVANCED_SECURITY: flag indicating that advanced security
+ *                                       techniques provided by AmneziaWG should
+ *                                       be used.
  *        0: NLA_NESTED
  *            ...
  *        ...
@@ -174,6 +177,7 @@ enum wgpeer_flag {
 	WGPEER_F_REMOVE_ME = 1U << 0,
 	WGPEER_F_REPLACE_ALLOWEDIPS = 1U << 1,
 	WGPEER_F_UPDATE_ONLY = 1U << 2,
+	WGPEER_F_HAS_ADVANCED_SECURITY = 1U << 3,
 	__WGPEER_F_ALL = WGPEER_F_REMOVE_ME | WGPEER_F_REPLACE_ALLOWEDIPS |
 			 WGPEER_F_UPDATE_ONLY
 };
@@ -189,6 +193,7 @@ enum wgpeer_attribute {
 	WGPEER_A_TX_BYTES,
 	WGPEER_A_ALLOWEDIPS,
 	WGPEER_A_PROTOCOL_VERSION,
+	WGPEER_A_ADVANCED_SECURITY,
 	__WGPEER_A_LAST
 };
 #define WGPEER_A_MAX (__WGPEER_A_LAST - 1)

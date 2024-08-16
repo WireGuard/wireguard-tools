@@ -7,6 +7,7 @@
 #define CONTAINERS_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <time.h>
 #include <sys/socket.h>
@@ -43,7 +44,8 @@ enum {
 	WGPEER_REPLACE_ALLOWEDIPS = 1U << 1,
 	WGPEER_HAS_PUBLIC_KEY = 1U << 2,
 	WGPEER_HAS_PRESHARED_KEY = 1U << 3,
-	WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL = 1U << 4
+	WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL = 1U << 4,
+	WGPEER_HAS_ADVANCED_SECURITY = 1U << 5
 };
 
 struct wgpeer {
@@ -61,6 +63,8 @@ struct wgpeer {
 	struct timespec64 last_handshake_time;
 	uint64_t rx_bytes, tx_bytes;
 	uint16_t persistent_keepalive_interval;
+
+	bool advanced_security;
 
 	struct wgallowedip *first_allowedip, *last_allowedip;
 	struct wgpeer *next_peer;
@@ -96,7 +100,7 @@ struct wgdevice {
 	uint16_t listen_port;
 
 	struct wgpeer *first_peer, *last_peer;
-	
+
 	uint16_t junk_packet_count;
 	uint16_t junk_packet_min_size;
 	uint16_t junk_packet_max_size;

@@ -447,6 +447,41 @@ static inline bool parse_uint32(uint32_t *device_value, const char *name, const 
 	return true;
 }
 
+static inline bool parse_bool(bool *device_value, const char *name, const char *value) {
+
+	if (!strlen(value)) {
+		fprintf(stderr, "Unable to parse empty string\n");
+		return false;
+	}
+
+	if (!strcasecmp(value, "off")) {
+		*device_value = false;
+		return true;
+	}
+
+	if (!strcasecmp(value, "on")) {
+		*device_value = true;
+		return true;
+	}
+
+	if (!char_is_digit(value[0]))
+		goto err;
+
+	char *end;
+	uint32_t ret;
+	ret = strtoul(value, &end, 10);
+
+	if (*end) {
+		fprintf(stderr, "Unable to parse %s: `%s'\n", name, value);
+		exit(1);
+	}
+	*device_value = ret != 0;
+	return true;
+err:
+	fprintf(stderr, "Boolean value is neither on/off nor 0/1: `%s'\n", value);
+	return false;
+}
+
 static bool process_line(struct config_ctx *ctx, const char *line)
 {
 	const char *value;
@@ -540,6 +575,10 @@ static bool process_line(struct config_ctx *ctx, const char *line)
 			ret = parse_key(ctx->last_peer->preshared_key, value);
 			if (ret)
 				ctx->last_peer->flags |= WGPEER_HAS_PRESHARED_KEY;
+		} else if (key_match("AdvancedSecurity")) {
+			ret = parse_bool(&ctx->last_peer->advanced_security, "AdvancedSecurity", value);
+			if (ret)
+				ctx->last_peer->flags |= WGPEER_HAS_ADVANCED_SECURITY;
 		} else
 			goto error;
 	} else
@@ -772,6 +811,12 @@ struct wgdevice *config_read_cmd(const char *argv[], int argc)
 			if (!parse_keyfile(peer->preshared_key, argv[1]))
 				goto error;
 			peer->flags |= WGPEER_HAS_PRESHARED_KEY;
+			argv += 2;
+			argc -= 2;
+		} else if (!strcmp(argv[0], "advanced-security") && argc >= 2 && peer) {
+			if (!parse_bool(&peer->advanced_security, "AdvancedSecurity", argv[1]))
+				goto error;
+			peer->flags |= WGPEER_HAS_ADVANCED_SECURITY;
 			argv += 2;
 			argc -= 2;
 		} else {

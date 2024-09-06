@@ -1,0 +1,24 @@
+=== Dynamic peers authentication example ===
+
+This example shows how to utilize netlink's multicast notifications
+in AmneziaWG kernel module to provide dynamic peer authentication.
+
+To compile it, you must install some pre-requisites:
+
+```shell
+apt-get install build-essential pkg-config libnl-3-dev libnl-genl-3-dev
+```
+
+After that, build example with the following command:
+
+```shell
+gcc notification-listener.c $(pkg-config --cflags --libs libnl-3.0 libnl-genl-3.0) -o notification-listener
+```
+
+Bring up AWG interface with `awg-quick` as usually, edit `accounts.csv` file accordingly to your needs and then run:
+
+```shell
+sudo ./notification-listener ./approve.sh ./accounts.csv
+```
+
+### **PLEASE NOTE: THIS EXAMPLE AS WELL AS OVERALL DYNAMIC AUTHENTICATION MECHANISM AND LEGACY CLIENTS' SUPPORT IN AMNEZIAWG IS SPONSORED BY [WINDSCRIBE LIMITED](https://windscribe.com)**

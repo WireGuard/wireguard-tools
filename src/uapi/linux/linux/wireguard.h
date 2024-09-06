@@ -129,6 +129,25 @@
  * of a peer, it likely should not be specified in subsequent fragments.
  *
  * If an error occurs, NLMSG_ERROR will reply containing an errno.
+ *
+ * WG_CMD_UNKNOWN_PEER
+ * ----------------------
+ *
+ * This command is sent on the multicast group WG_MULTICAST_GROUP_AUTH
+ * when the initiation message received from a peer with an unknown public
+ * key.
+ * The kernel will send a single message containing the
+ * following tree of nested items:
+ *
+ *    WGDEVICE_A_IFINDEX: NLA_U32
+ *    WGDEVICE_A_IFNAME: NLA_NUL_STRING, maxlen IFNAMSIZ - 1
+ *    WGDEVICE_A_PEER: NLA_NESTED
+ *        WGPEER_A_PUBLIC_KEY: NLA_EXACT_LEN, len WG_KEY_LEN
+ *        WGPEER_A_ENDPOINT: NLA_MIN_LEN(struct sockaddr), struct sockaddr_in or struct sockaddr_in6
+ *        WGPEER_A_ADVANCED_SECURITY: flag indicating that advanced security
+ *                                    techniques provided by AmneziaWG should
+ *                                    be used.
+ *
  */
 
 #ifndef _WG_UAPI_WIREGUARD_H
@@ -139,9 +158,12 @@
 
 #define WG_KEY_LEN 32
 
+#define WG_MULTICAST_GROUP_AUTH "auth"
+
 enum wg_cmd {
 	WG_CMD_GET_DEVICE,
 	WG_CMD_SET_DEVICE,
+	WG_CMD_UNKNOWN_PEER,
 	__WG_CMD_MAX
 };
 #define WG_CMD_MAX (__WG_CMD_MAX - 1)
@@ -169,6 +191,7 @@ enum wgdevice_attribute {
 	WGDEVICE_A_H2,
 	WGDEVICE_A_H3,
 	WGDEVICE_A_H4,
+	WGDEVICE_A_PEER,
 	__WGDEVICE_A_LAST
 };
 #define WGDEVICE_A_MAX (__WGDEVICE_A_LAST - 1)

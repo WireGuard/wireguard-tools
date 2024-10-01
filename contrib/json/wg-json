@@ -2,20 +2,30 @@
 # SPDX-License-Identifier: GPL-2.0
 #
 # Copyright (C) 2015-2020 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+# Copyright (C) 2024 Amnezia VPN. All Rights Reserved.
 
-exec < <(exec wg show all dump)
+exec < <(exec awg show all dump)
 
 printf '{'
 while read -r -d $'\t' device; do
 	if [[ $device != "$last_device" ]]; then
 		[[ -z $last_device ]] && printf '\n' || printf '%s,\n' "$end"
 		last_device="$device"
-		read -r private_key public_key listen_port fwmark
+		read -r private_key public_key listen_port jc jmin jmax s1 s2 h1 h2 h3 h4 fwmark
 		printf '\t"%s": {' "$device"
 		delim=$'\n'
 		[[ $private_key == "(none)" ]] || { printf '%s\t\t"privateKey": "%s"' "$delim" "$private_key"; delim=$',\n'; }
 		[[ $public_key == "(none)" ]] || { printf '%s\t\t"publicKey": "%s"' "$delim" "$public_key"; delim=$',\n'; }
 		[[ $listen_port == "0" ]] || { printf '%s\t\t"listenPort": %u' "$delim" $(( $listen_port )); delim=$',\n'; }
+		[[ $jc == "0" ]] || { printf '%s\t\t"jc": %u' "$delim" $(( $jc )); delim=$',\n'; }
+		[[ $jmin == "0" ]] || { printf '%s\t\t"jmin": %u' "$delim" $(( $jmin )); delim=$',\n'; }
+		[[ $jmax == "0" ]] || { printf '%s\t\t"jmax": %u' "$delim" $(( $jmax )); delim=$',\n'; }
+		[[ $s1 == "0" ]] || { printf '%s\t\t"s1": %u' "$delim" $(( $s1 )); delim=$',\n'; }
+		[[ $s2 == "0" ]] || { printf '%s\t\t"s2": %u' "$delim" $(( $s2 )); delim=$',\n'; }
+		[[ $h1 == "1" ]] || { printf '%s\t\t"h1": %u' "$delim" $(( $h1 )); delim=$',\n'; }
+		[[ $h2 == "2" ]] || { printf '%s\t\t"h2": %u' "$delim" $(( $h2 )); delim=$',\n'; }
+		[[ $h3 == "3" ]] || { printf '%s\t\t"h3": %u' "$delim" $(( $h3 )); delim=$',\n'; }
+		[[ $h4 == "4" ]] || { printf '%s\t\t"h4": %u' "$delim" $(( $h4 )); delim=$',\n'; }
 		[[ $fwmark == "off" ]] || { printf '%s\t\t"fwmark": %u' "$delim" $(( $fwmark )); delim=$',\n'; }
 		printf '%s\t\t"peers": {' "$delim"; end=$'\n\t\t}\n\t}'
 		delim=$'\n'

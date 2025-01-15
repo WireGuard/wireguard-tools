@@ -62,6 +62,7 @@ parse_options() {
 		stripped="${line%%\#*}"
 		key="${stripped%%=*}"; key="${key##*([[:space:]])}"; key="${key%%*([[:space:]])}"
 		value="${stripped#*=}"; value="${value##*([[:space:]])}"; value="${value%%*([[:space:]])}"
+		unstripped_value="${line#*=}"; unstripped_value="${unstripped_value##*([[:space:]])}"; unstripped_value="${unstripped_value%%*([[:space:]])}"
 		[[ $key == "["* ]] && interface_section=0
 		[[ $key == "[Interface]" ]] && interface_section=1
 		if [[ $interface_section -eq 1 ]]; then
@@ -72,10 +73,10 @@ parse_options() {
 				[[ $v =~ (^[0-9.]+$)|(^.*:.*$) ]] && DNS+=( $v ) || DNS_SEARCH+=( $v )
 			done; continue ;;
 			Table) TABLE="$value"; continue ;;
-			PreUp) PRE_UP+=( "$value" ); continue ;;
-			PreDown) PRE_DOWN+=( "$value" ); continue ;;
-			PostUp) POST_UP+=( "$value" ); continue ;;
-			PostDown) POST_DOWN+=( "$value" ); continue ;;
+			PreUp) PRE_UP+=( "$unstripped_value" ); continue ;;
+			PreDown) PRE_DOWN+=( "$unstripped_value" ); continue ;;
+			PostUp) POST_UP+=( "$unstripped_value" ); continue ;;
+			PostDown) POST_DOWN+=( "$unstripped_value" ); continue ;;
 			SaveConfig) read_bool SAVE_CONFIG "$value"; continue ;;
 			esac
 		fi

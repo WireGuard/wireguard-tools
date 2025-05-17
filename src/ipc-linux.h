@@ -228,6 +228,8 @@ again:
 				}
 				if (!mnl_attr_put_u8_check(nlh, SOCKET_BUFFER_SIZE, WGALLOWEDIP_A_CIDR_MASK, allowedip->cidr))
 					goto toobig_allowedips;
+				if (allowedip->flags && !mnl_attr_put_u32_check(nlh, SOCKET_BUFFER_SIZE, WGALLOWEDIP_A_FLAGS, allowedip->flags))
+					goto toobig_allowedips;
 				mnl_attr_nest_end(nlh, allowedip_nest);
 				allowedip_nest = NULL;
 			}

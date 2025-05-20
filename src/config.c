@@ -374,6 +374,11 @@ static inline bool parse_allowedips(struct wgpeer *peer, struct wgallowedip **la
 		parse_ip_prefix(peer, &flags, &mask);
 
 		saved_entry = strdup(mask);
+		if (!saved_entry) {
+			perror("strdup");
+			free(mutable);
+			return false;
+		}
 		ip = strsep(&mask, "/");
 
 		new_allowedip = calloc(1, sizeof(*new_allowedip));

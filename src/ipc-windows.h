@@ -418,6 +418,12 @@ static int kernel_set_device(struct wgdevice *dev)
 		aip_count = 0;
 		wg_aip = (void *)wg_peer + sizeof(WG_IOCTL_PEER);
 		for_each_wgallowedip(peer, aip) {
+			if (aip->flags) {
+				//TODO: implement me
+				errno = EOPNOTSUPP;
+				goto out;
+			}
+
 			wg_aip->AddressFamily = aip->family;
 			wg_aip->Cidr = aip->cidr;
 

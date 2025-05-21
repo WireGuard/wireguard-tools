@@ -123,7 +123,7 @@ add_addr() {
 }
 
 set_mtu_up() {
-	local mtu=0 endpoint output
+	local mtu=2147483647 endpoint output
 	if [[ -n $MTU ]]; then
 		cmd ip link set mtu "$MTU" up dev "$INTERFACE"
 		return
@@ -131,13 +131,13 @@ set_mtu_up() {
 	while read -r _ endpoint; do
 		[[ $endpoint =~ ^\[?([a-z0-9:.]+)\]?:[0-9]+$ ]] || continue
 		output="$(ip route get "${BASH_REMATCH[1]}" || true)"
-		[[ ( $output =~ mtu\ ([0-9]+) || ( $output =~ dev\ ([^ ]+) && $(ip link show dev "${BASH_REMATCH[1]}") =~ mtu\ ([0-9]+) ) ) && ${BASH_REMATCH[1]} -gt $mtu ]] && mtu="${BASH_REMATCH[1]}"
+		[[ ( $output =~ mtu\ ([0-9]+) || ( $output =~ dev\ ([^ ]+) && $(ip link show dev "${BASH_REMATCH[1]}") =~ mtu\ ([0-9]+) ) ) && ${BASH_REMATCH[1]} -lt $mtu ]] && mtu="${BASH_REMATCH[1]}"
 	done < <(wg show "$INTERFACE" endpoints)
-	if [[ $mtu -eq 0 ]]; then
+	if [[ $mtu -eq 2147483647 ]]; then
 		read -r output < <(ip route show default || true) || true
-		[[ ( $output =~ mtu\ ([0-9]+) || ( $output =~ dev\ ([^ ]+) && $(ip link show dev "${BASH_REMATCH[1]}") =~ mtu\ ([0-9]+) ) ) && ${BASH_REMATCH[1]} -gt $mtu ]] && mtu="${BASH_REMATCH[1]}"
+		[[ ( $output =~ mtu\ ([0-9]+) || ( $output =~ dev\ ([^ ]+) && $(ip link show dev "${BASH_REMATCH[1]}") =~ mtu\ ([0-9]+) ) ) && ${BASH_REMATCH[1]} -lt $mtu ]] && mtu="${BASH_REMATCH[1]}"
 	fi
-	[[ $mtu -gt 0 ]] || mtu=1500
+	[[ $mtu -gt 0 && $mtu -lt 2147483647 ]] || mtu=1500
 	cmd ip link set mtu $(( mtu - 80 )) up dev "$INTERFACE"
 }
 

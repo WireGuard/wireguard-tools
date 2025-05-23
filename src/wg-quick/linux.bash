@@ -143,7 +143,7 @@ set_mtu_up() {
 }
 
 resolvconf_iface_prefix() {
-	[[ -f /etc/resolvconf/interface-order ]] || return 0
+	[[ -f /etc/resolvconf/interface-order && ! -L $(type -P resolvconf) ]] || return 0
 	local iface
 	while read -r iface; do
 		[[ $iface =~ ^([A-Za-z0-9-]+)\*$ ]] || continue

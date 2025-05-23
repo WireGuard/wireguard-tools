@@ -13,15 +13,15 @@
 #include "ipc.h"
 #include "subcommands.h"
 
-struct pubkey_origin {
-	uint8_t *pubkey;
+struct peer_origin {
+	struct wgpeer *peer;
 	bool from_file;
 };
 
-static int pubkey_cmp(const void *first, const void *second)
+static int peer_cmp(const void *first, const void *second)
 {
-	const struct pubkey_origin *a = first, *b = second;
-	int ret = memcmp(a->pubkey, b->pubkey, WG_KEY_LEN);
+	const struct peer_origin *a = first, *b = second;
+	int ret = memcmp(a->peer->public_key, b->peer->public_key, WG_KEY_LEN);
 	if (ret)
 		return ret;
 	return a->from_file - b->from_file;
@@ -31,7 +31,7 @@ static bool sync_conf(struct wgdevice *file)
 {
 	struct wgdevice *runtime;
 	struct wgpeer *peer;
-	struct pubkey_origin *pubkeys;
+	struct peer_origin *peers;
 	size_t peer_count = 0, i = 0;
 
 	if (!file->first_peer)
@@ -55,46 +55,51 @@ static bool sync_conf(struct wgdevice *file)
 	for_each_wgpeer(runtime, peer)
 		++peer_count;
 
-	pubkeys = calloc(peer_count, sizeof(*pubkeys));
-	if (!pubkeys) {
+	peers = calloc(peer_count, sizeof(*peers));
+	if (!peers) {
 		free_wgdevice(runtime);
-		perror("Public key allocation");
+		perror("Peer list allocation");
 		return false;
 	}
 
 	for_each_wgpeer(file, peer) {
-		pubkeys[i].pubkey = peer->public_key;
-		pubkeys[i].from_file = true;
+		peers[i].peer = peer;
+		peers[i].from_file = true;
 		++i;
 	}
 	for_each_wgpeer(runtime, peer) {
-		pubkeys[i].pubkey = peer->public_key;
-		pubkeys[i].from_file = false;
+		peers[i].peer = peer;
+		peers[i].from_file = false;
 		++i;
 	}
-	qsort(pubkeys, peer_count, sizeof(*pubkeys), pubkey_cmp);
+	qsort(peers, peer_count, sizeof(*peers), peer_cmp);
 
 	for (i = 0; i < peer_count; ++i) {
-		if (pubkeys[i].from_file)
+		if (peers[i].from_file)
 			continue;
-		if (i == peer_count - 1 || !pubkeys[i + 1].from_file || memcmp(pubkeys[i].pubkey, pubkeys[i + 1].pubkey, WG_KEY_LEN)) {
+		if (i == peer_count - 1 || !peers[i + 1].from_file || memcmp(peers[i].peer->public_key, peers[i + 1].peer->public_key, WG_KEY_LEN)) {
 			peer = calloc(1, sizeof(struct wgpeer));
 			if (!peer) {
 				free_wgdevice(runtime);
-				free(pubkeys);
+				free(peers);
 				perror("Peer allocation");
 				return false;
 			}
 			peer->flags = WGPEER_REMOVE_ME;
-			memcpy(peer->public_key, pubkeys[i].pubkey, WG_KEY_LEN);
+			memcpy(peer->public_key, peers[i].peer->public_key, WG_KEY_LEN);
 			peer->next_peer = file->first_peer;
 			file->first_peer = peer;
 			if (!file->last_peer)
 				file->last_peer = peer;
+		} else if (i < peer_count - 1 && peers[i + 1].from_file &&
+		           (peers[i].peer->flags & WGPEER_HAS_PRESHARED_KEY) && !(peers[i + 1].peer->flags & WGPEER_HAS_PRESHARED_KEY) &&
+			   !memcmp(peers[i].peer->public_key, peers[i + 1].peer->public_key, WG_KEY_LEN)) {
+			memset(peers[i + 1].peer->preshared_key, 0, WG_KEY_LEN);
+			peers[i + 1].peer->flags |= WGPEER_HAS_PRESHARED_KEY;
 		}
 	}
 	free_wgdevice(runtime);
-	free(pubkeys);
+	free(peers);
 	return true;
 }
 

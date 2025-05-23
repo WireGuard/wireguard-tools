@@ -91,11 +91,21 @@ static bool sync_conf(struct wgdevice *file)
 			file->first_peer = peer;
 			if (!file->last_peer)
 				file->last_peer = peer;
-		} else if (i < peer_count - 1 && peers[i + 1].from_file &&
-		           (peers[i].peer->flags & WGPEER_HAS_PRESHARED_KEY) && !(peers[i + 1].peer->flags & WGPEER_HAS_PRESHARED_KEY) &&
-			   !memcmp(peers[i].peer->public_key, peers[i + 1].peer->public_key, WG_KEY_LEN)) {
-			memset(peers[i + 1].peer->preshared_key, 0, WG_KEY_LEN);
-			peers[i + 1].peer->flags |= WGPEER_HAS_PRESHARED_KEY;
+		} else {
+			if (i < peer_count - 1 && peers[i + 1].from_file &&
+			    (peers[i].peer->flags & WGPEER_HAS_PRESHARED_KEY) &&
+			    !(peers[i + 1].peer->flags & WGPEER_HAS_PRESHARED_KEY) &&
+			    !memcmp(peers[i].peer->public_key, peers[i + 1].peer->public_key, WG_KEY_LEN)) {
+				memset(peers[i + 1].peer->preshared_key, 0, WG_KEY_LEN);
+				peers[i + 1].peer->flags |= WGPEER_HAS_PRESHARED_KEY;
+			}
+			if (i < peer_count - 1 && peers[i + 1].from_file &&
+			    peers[i].peer->persistent_keepalive_interval &&
+			    !(peers[i + 1].peer->flags & WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL) &&
+			    !memcmp(peers[i].peer->public_key, peers[i + 1].peer->public_key, WG_KEY_LEN)) {
+				peers[i + 1].peer->persistent_keepalive_interval = 0;
+				peers[i + 1].peer->flags |= WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL;
+			}
 		}
 	}
 	free_wgdevice(runtime);

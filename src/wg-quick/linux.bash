@@ -193,7 +193,7 @@ remove_firewall() {
 		while read -r table; do
 			[[ $table == *" wg-quick-$INTERFACE" ]] && printf -v nftcmd '%sdelete %s\n' "$nftcmd" "$table"
 		done < <(nft list tables 2>/dev/null)
-		[[ -z $nftcmd ]] || cmd nft -f <(echo -n "$nftcmd")
+		[[ -z $nftcmd ]] || cmd nft "$nftcmd"
 	fi
 	if type -p iptables >/dev/null; then
 		local line iptables found restore
@@ -221,9 +221,9 @@ add_default() {
 	fi
 	local proto=-4 iptables=iptables pf=ip
 	[[ $1 == *:* ]] && proto=-6 iptables=ip6tables pf=ip6
+	cmd ip $proto route add "$1" dev "$INTERFACE" table $table
 	cmd ip $proto rule add not fwmark $table table $table
 	cmd ip $proto rule add table main suppress_prefixlength 0
-	cmd ip $proto route add "$1" dev "$INTERFACE" table $table
 
 	local marker="-m comment --comment \"wg-quick(8) rule for $INTERFACE\"" restore=$'*raw\n' nftable="wg-quick-$INTERFACE" nftcmd 
 	printf -v nftcmd '%sadd table %s %s\n' "$nftcmd" "$pf" "$nftable"
@@ -240,7 +240,7 @@ add_default() {
 	printf -v nftcmd '%sadd rule %s %s premangle meta l4proto udp meta mark set ct mark \n' "$nftcmd" "$pf" "$nftable"
 	[[ $proto == -4 ]] && cmd sysctl -q net.ipv4.conf.all.src_valid_mark=1
 	if type -p nft >/dev/null; then
-		cmd nft -f <(echo -n "$nftcmd")
+		cmd nft "$nftcmd"
 	else
 		echo -n "$restore" | cmd $iptables-restore -n
 	fi
@@ -249,7 +249,10 @@ add_default() {
 }
 
 set_config() {
+	local WG_CONFIGTMP
+	WG_CONFIGTMP=$(echo "wg configuration\n$WG_CONFIG" | sed -e 's/\(PrivateKey = \|PresharedKey = \).*$/\1(hidden)/')
 	cmd wg setconf "$INTERFACE" <(echo "$WG_CONFIG")
+	echo -e "$WG_CONFIGTMP"
 }
 
 save_config() {
@@ -328,8 +331,8 @@ cmd_up() {
 	local i
 	[[ -z $(ip link show dev "$INTERFACE" 2>/dev/null) ]] || die "\`$INTERFACE' already exists"
 	trap 'del_if; exit' INT TERM EXIT
-	add_if
 	execute_hooks "${PRE_UP[@]}"
+	add_if
 	set_config
 	for i in "${ADDRESSES[@]}"; do
 		add_addr "$i"

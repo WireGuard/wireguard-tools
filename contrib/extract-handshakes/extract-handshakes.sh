@@ -43,7 +43,7 @@ turn_off() {
 }
 
 trap turn_off INT TERM EXIT
-echo "p:wireguard/idxadd index_hashtable_insert ${ARGS[*]}" >> /sys/kernel/debug/tracing/kprobe_events
+echo "p:wireguard/idxadd wg_index_hashtable_insert ${ARGS[*]}" >> /sys/kernel/debug/tracing/kprobe_events
 echo 1 > /sys/kernel/debug/tracing/events/wireguard/idxadd/enable
 
 unpack_u64() {

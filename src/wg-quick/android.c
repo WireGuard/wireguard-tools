@@ -1047,7 +1047,7 @@ static void set_routes(const char *iface, unsigned int netid)
 static void set_config(const char *iface, const char *config)
 {
 	FILE *config_writer;
-	_cleanup_free_ char *cmd = concat("wg setconf ", iface, " /proc/self/fd/0", NULL);
+	_cleanup_free_ char *cmd = concat("wg addconf ", iface, " /proc/self/fd/0", NULL);
 	int ret;
 
 	printf("[#] %s\n", cmd);

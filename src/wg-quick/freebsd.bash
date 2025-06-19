@@ -338,7 +338,7 @@ add_route() {
 }
 
 set_config() {
-	echo "$WG_CONFIG" | cmd wg setconf "$INTERFACE" /dev/stdin
+	echo "$WG_CONFIG" | cmd wg addconf "$INTERFACE" /dev/stdin
 }
 
 save_config() {

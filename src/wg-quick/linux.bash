@@ -249,7 +249,7 @@ add_default() {
 }
 
 set_config() {
-	cmd wg setconf "$INTERFACE" <(echo "$WG_CONFIG")
+	cmd wg addconf "$INTERFACE" <(echo "$WG_CONFIG")
 }
 
 save_config() {

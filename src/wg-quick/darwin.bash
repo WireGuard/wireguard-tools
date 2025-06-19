@@ -370,7 +370,7 @@ add_route() {
 }
 
 set_config() {
-	cmd wg setconf "$REAL_INTERFACE" <(echo "$WG_CONFIG")
+	cmd wg addconf "$REAL_INTERFACE" <(echo "$WG_CONFIG")
 }
 
 save_config() {

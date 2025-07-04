@@ -91,68 +91,163 @@ static int kernel_get_device(struct wgdevice **device, const char *ifname)
 			dev->flags |= WGDEVICE_HAS_LISTEN_PORT;
 		}
 	}
-	if (nvlist_exists_number(nvl_device, "jc")) {	
+	if (nvlist_exists_number(nvl_device, "jc")) {
 		number = nvlist_get_number(nvl_device, "jc");
 		if (number <= UINT16_MAX){
 			dev->junk_packet_count = number;
 			dev->flags |= WGDEVICE_HAS_JC;
 		}
 	}
-	if (nvlist_exists_number(nvl_device, "jmin")) {		
+	if (nvlist_exists_number(nvl_device, "jmin")) {
 		number = nvlist_get_number(nvl_device, "jmin");
 		if (number <= UINT16_MAX){
-			dev->junk_packet_min_size = number;			
+			dev->junk_packet_min_size = number;
 			dev->flags |= WGDEVICE_HAS_JMIN;
-		}			
+		}
 	}
-	if (nvlist_exists_number(nvl_device, "jmax")) {		
+	if (nvlist_exists_number(nvl_device, "jmax")) {
 		number = nvlist_get_number(nvl_device, "jmax");
 		if (number <= UINT16_MAX){
-			dev->junk_packet_max_size = number;			
+			dev->junk_packet_max_size = number;
 			dev->flags |= WGDEVICE_HAS_JMAX;
-		}			
+		}
 	}
-	if (nvlist_exists_number(nvl_device, "s1")) {		
+	if (nvlist_exists_number(nvl_device, "s1")) {
 		number = nvlist_get_number(nvl_device, "s1");
 		if (number <= UINT16_MAX){
-			dev->init_packet_junk_size = number;			
+			dev->init_packet_junk_size = number;
 			dev->flags |= WGDEVICE_HAS_S1;
-		}			
+		}
 	}
-	if (nvlist_exists_number(nvl_device, "s2")) {		
+	if (nvlist_exists_number(nvl_device, "s2")) {
 		number = nvlist_get_number(nvl_device, "s2");
 		if (number <= UINT16_MAX){
-			dev->response_packet_junk_size = number;			
+			dev->response_packet_junk_size = number;
 			dev->flags |= WGDEVICE_HAS_S2;
-		}			
+		}
 	}
-	if (nvlist_exists_number(nvl_device, "h1")) {		
+	if (nvlist_exists_number(nvl_device, "s3")) {
+		number = nvlist_get_number(nvl_device, "s3");
+		if (number <= UINT16_MAX){
+			dev->cookie_reply_packet_junk_size = number;
+			dev->flags |= WGDEVICE_HAS_S3;
+		}
+	}
+	if (nvlist_exists_number(nvl_device, "s4")) {
+		number = nvlist_get_number(nvl_device, "s4");
+		if (number <= UINT16_MAX){
+			dev->transport_packet_junk_size = number;
+			dev->flags |= WGDEVICE_HAS_S4;
+		}
+	}
+	if (nvlist_exists_number(nvl_device, "h1")) {
 		number = nvlist_get_number(nvl_device, "h1");
 		if (number <= UINT32_MAX){
-			dev->init_packet_magic_header = number;			
+			dev->init_packet_magic_header = number;
 			dev->flags |= WGDEVICE_HAS_H1;
-		}			
+		}
 	}
-	if (nvlist_exists_number(nvl_device, "h2")) {		
+	if (nvlist_exists_number(nvl_device, "h2")) {
 		number = nvlist_get_number(nvl_device, "h2");
 		if (number <= UINT32_MAX){
-			dev->response_packet_magic_header = number;			
+			dev->response_packet_magic_header = number;
 			dev->flags |= WGDEVICE_HAS_H2;
-		}			
+		}
 	}
-	if (nvlist_exists_number(nvl_device, "h3")) {		
+	if (nvlist_exists_number(nvl_device, "h3")) {
 		number = nvlist_get_number(nvl_device, "h3");
 		if (number <= UINT32_MAX){
-			dev->underload_packet_magic_header = number;			
+			dev->underload_packet_magic_header = number;
 			dev->flags |= WGDEVICE_HAS_H3;
-		}			
+		}
 	}
-	if (nvlist_exists_number(nvl_device, "h4")) {		
+	if (nvlist_exists_number(nvl_device, "h4")) {
 		number = nvlist_get_number(nvl_device, "h4");
 		if (number <= UINT32_MAX){
-			dev->transport_packet_magic_header = number;			
+			dev->transport_packet_magic_header = number;
 			dev->flags |= WGDEVICE_HAS_H4;
-		}			
+		}
+	}
+	if (nvlist_exists_binary(nvl_device, "i1"))
+	{
+		binary = nvlist_get_binary(nvl_device, "i1", &size);
+		if (binary && size < MAX_AWG_JUNK_LEN)
+		{
+			dev->i1 = strdup((const char*)binary);
+			dev->flags |= WGDEVICE_HAS_I1;
+		}
+	}
+	if (nvlist_exists_binary(nvl_device, "i2"))
+	{
+		binary = nvlist_get_binary(nvl_device, "i2", &size);
+		if (binary && size < MAX_AWG_JUNK_LEN)
+		{
+			dev->i2 = strdup((const char*)binary);
+			dev->flags |= WGDEVICE_HAS_I2;
+		}
+	}
+	if (nvlist_exists_binary(nvl_device, "i3"))
+	{
+		binary = nvlist_get_binary(nvl_device, "i3", &size);
+		if (binary && size < MAX_AWG_JUNK_LEN)
+		{
+			dev->i3 = strdup((const char*)binary);
+			dev->flags |= WGDEVICE_HAS_I3;
+		}
+	}
+	if (nvlist_exists_binary(nvl_device, "i4"))
+	{
+		binary = nvlist_get_binary(nvl_device, "i4", &size);
+		if (binary && size < MAX_AWG_JUNK_LEN)
+		{
+			dev->i4 = strdup((const char*)binary);
+			dev->flags |= WGDEVICE_HAS_I4;
+		}
+	}
+	if (nvlist_exists_binary(nvl_device, "i5"))
+	{
+		binary = nvlist_get_binary(nvl_device, "i5", &size);
+		if (binary && size < MAX_AWG_JUNK_LEN)
+		{
+			dev->i5 = strdup((const char*)binary);
+			dev->flags |= WGDEVICE_HAS_I5;
+		}
+	}
+	if (nvlist_exists_binary(nvl_device, "j1"))
+	{
+		binary = nvlist_get_binary(nvl_device, "j1", &size);
+		if (binary && size < MAX_AWG_JUNK_LEN)
+		{
+			dev->j1 = strdup((const char*)binary);
+			dev->flags |= WGDEVICE_HAS_J1;
+		}
+	}
+	if (nvlist_exists_binary(nvl_device, "j2"))
+	{
+		binary = nvlist_get_binary(nvl_device, "j2", &size);
+		if (binary && size < MAX_AWG_JUNK_LEN)
+		{
+			dev->j2 = strdup((const char*)binary);
+			dev->flags |= WGDEVICE_HAS_J2;
+		}
+	}
+	if (nvlist_exists_binary(nvl_device, "j3"))
+	{
+		binary = nvlist_get_binary(nvl_device, "j3", &size);
+		if (binary && size < MAX_AWG_JUNK_LEN)
+		{
+			dev->j3 = strdup((const char*)binary);
+			dev->flags |= WGDEVICE_HAS_J3;
+		}
+	}
+	if (nvlist_exists_binary(nvl_device, "itime"))
+	{
+		number = nvlist_get_number(nvl_device, "itime");
+		if (number <= UINT32_MAX)
+		{
+			dev->itime = number;
+			dev->flags |= WGDEVICE_HAS_ITIME;
+		}
 	}
 
 	if (nvlist_exists_number(nvl_device, "user-cookie")) {
@@ -346,6 +441,10 @@ static int kernel_set_device(struct wgdevice *dev)
 		nvlist_add_number(nvl_device, "s1", dev->init_packet_junk_size);
 	if (dev->flags & WGDEVICE_HAS_S2)
 		nvlist_add_number(nvl_device, "s2", dev->response_packet_junk_size);
+	if (dev->flags & WGDEVICE_HAS_S3)
+		nvlist_add_number(nvl_device, "s3", dev->cookie_reply_packet_junk_size);
+	if (dev->flags & WGDEVICE_HAS_S4)
+		nvlist_add_number(nvl_device, "s4", dev->transport_packet_junk_size);
 	if (dev->flags & WGDEVICE_HAS_H1)
 		nvlist_add_number(nvl_device, "h1", dev->init_packet_magic_header);
 	if (dev->flags & WGDEVICE_HAS_H2)
@@ -354,6 +453,24 @@ static int kernel_set_device(struct wgdevice *dev)
 		nvlist_add_number(nvl_device, "h3", dev->underload_packet_magic_header);
 	if (dev->flags & WGDEVICE_HAS_H4)
 		nvlist_add_number(nvl_device, "h4", dev->transport_packet_magic_header);
+	if (dev->flags & WGDEVICE_HAS_I1)
+		nvlist_add_binary(nvl_device, "i1", dev->i1, strlen(dev->i1) + 1);
+	if (dev->flags & WGDEVICE_HAS_I2)
+		nvlist_add_binary(nvl_device, "i2", dev->i2, strlen(dev->i2) + 1);
+	if (dev->flags & WGDEVICE_HAS_I3)
+		nvlist_add_binary(nvl_device, "i3", dev->i3, strlen(dev->i3) + 1);
+	if (dev->flags & WGDEVICE_HAS_I4)
+		nvlist_add_binary(nvl_device, "i4", dev->i4, strlen(dev->i4) + 1);
+	if (dev->flags & WGDEVICE_HAS_I5)
+		nvlist_add_binary(nvl_device, "i5", dev->i5, strlen(dev->i5) + 1);
+	if (dev->flags & WGDEVICE_HAS_J1)
+		nvlist_add_binary(nvl_device, "j1", dev->j1, strlen(dev->j1) + 1);
+	if (dev->flags & WGDEVICE_HAS_J2)
+		nvlist_add_binary(nvl_device, "j2", dev->j2, strlen(dev->j2) + 1);
+	if (dev->flags & WGDEVICE_HAS_J3)
+		nvlist_add_binary(nvl_device, "j3", dev->j3, strlen(dev->j3) + 1);
+	if (dev->flags & WGDEVICE_HAS_ITIME)
+		nvlist_add_number(nvl_device, "itime", dev->itime);
 	if (dev->flags & WGDEVICE_HAS_FWMARK)
 		nvlist_add_number(nvl_device, "user-cookie", dev->fwmark);
 	if (dev->flags & WGDEVICE_REPLACE_PEERS)

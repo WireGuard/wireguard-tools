@@ -23,10 +23,6 @@
 #define WG_KEY_LEN 32
 #endif
 
-#ifndef MAX_AWG_JUNK_LEN
-#define MAX_AWG_JUNK_LEN 5 * 1024
-#endif
-
 /* Cross platform __kernel_timespec */
 struct timespec64 {
 	int64_t tv_sec;
@@ -49,8 +45,7 @@ enum {
 	WGPEER_HAS_PUBLIC_KEY = 1U << 2,
 	WGPEER_HAS_PRESHARED_KEY = 1U << 3,
 	WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL = 1U << 4,
-	WGPEER_HAS_ADVANCED_SECURITY = 1U << 5,
-	WGPEER_HAS_SPECIAL_HANDSHAKE = 1U << 6
+	WGPEER_HAS_ADVANCED_SECURITY = 1U << 5
 };
 
 struct wgpeer {
@@ -70,7 +65,6 @@ struct wgpeer {
 	uint16_t persistent_keepalive_interval;
 
 	bool advanced_security;
-	bool special_handshake;
 
 	struct wgallowedip *first_allowedip, *last_allowedip;
 	struct wgpeer *next_peer;
@@ -87,21 +81,10 @@ enum {
 	WGDEVICE_HAS_JMAX = 1U << 7,
 	WGDEVICE_HAS_S1 = 1U << 8,
 	WGDEVICE_HAS_S2 = 1U << 9,
-	WGDEVICE_HAS_S3 = 1U << 10,
-	WGDEVICE_HAS_S4 = 1U << 11,
-	WGDEVICE_HAS_H1 = 1U << 12,
-	WGDEVICE_HAS_H2 = 1U << 12,
-	WGDEVICE_HAS_H3 = 1U << 13,
-	WGDEVICE_HAS_H4 = 1U << 14,
-	WGDEVICE_HAS_I1 = 1U << 15,
-	WGDEVICE_HAS_I2 = 1U << 16,
-	WGDEVICE_HAS_I3 = 1U << 17,
-	WGDEVICE_HAS_I4 = 1U << 18,
-	WGDEVICE_HAS_I5 = 1U << 19,
-	WGDEVICE_HAS_J1 = 1U << 20,
-	WGDEVICE_HAS_J2 = 1U << 21,
-	WGDEVICE_HAS_J3 = 1U << 22,
-	WGDEVICE_HAS_ITIME = 1U << 23
+	WGDEVICE_HAS_H1 = 1U << 10,
+	WGDEVICE_HAS_H2 = 1U << 11,
+	WGDEVICE_HAS_H3 = 1U << 12,
+	WGDEVICE_HAS_H4 = 1U << 13
 };
 
 struct wgdevice {
@@ -123,21 +106,10 @@ struct wgdevice {
 	uint16_t junk_packet_max_size;
 	uint16_t init_packet_junk_size;
 	uint16_t response_packet_junk_size;
-	uint16_t cookie_reply_packet_junk_size;
-	uint16_t transport_packet_junk_size;
 	uint32_t init_packet_magic_header;
 	uint32_t response_packet_magic_header;
 	uint32_t underload_packet_magic_header;
 	uint32_t transport_packet_magic_header;
-	char*    i1;
-	char*    i2;
-	char*    i3;
-	char*    i4;
-	char*    i5;
-	char*    j1;
-	char*    j2;
-	char*    j3;
-	uint32_t itime;
 };
 
 #define for_each_wgpeer(__dev, __peer) for ((__peer) = (__dev)->first_peer; (__peer); (__peer) = (__peer)->next_peer)

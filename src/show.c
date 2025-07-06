@@ -202,7 +202,7 @@ static char *bytes(uint64_t b)
 static const char *COMMAND_NAME;
 static void show_usage(void)
 {
-	fprintf(stderr, "Usage: %s %s { <interface> | all | interfaces } [public-key | private-key | listen-port | fwmark | peers | preshared-keys | endpoints | allowed-ips | latest-handshakes | transfer | persistent-keepalive | dump | jc | jmin | jmax | s1 | s2 | h1 | h2 | h3 | h4 | i1 | i2 | i3 | i4 | i5 | j1 | j2 | j3 | itime]\n", PROG_NAME, COMMAND_NAME);
+	fprintf(stderr, "Usage: %s %s { <interface> | all | interfaces } [public-key | private-key | listen-port | fwmark | peers | preshared-keys | endpoints | allowed-ips | latest-handshakes | transfer | persistent-keepalive | dump]\n", PROG_NAME, COMMAND_NAME);
 }
 
 static void pretty_print(struct wgdevice *device)
@@ -230,10 +230,6 @@ static void pretty_print(struct wgdevice *device)
 		terminal_printf("  " TERMINAL_BOLD "s1" TERMINAL_RESET ": %u\n", device->init_packet_junk_size);
 	if (device->response_packet_junk_size)
 		terminal_printf("  " TERMINAL_BOLD "s2" TERMINAL_RESET ": %u\n", device->response_packet_junk_size);
-	if (device->cookie_reply_packet_junk_size)
-		terminal_printf("  " TERMINAL_BOLD "s3" TERMINAL_RESET ": %u\n", device->cookie_reply_packet_junk_size);
-	if (device->transport_packet_junk_size)
-		terminal_printf("  " TERMINAL_BOLD "s4" TERMINAL_RESET ": %u\n", device->transport_packet_junk_size);
 	if (device->init_packet_magic_header)
 		terminal_printf("  " TERMINAL_BOLD "h1" TERMINAL_RESET ": %u\n", device->init_packet_magic_header);
 	if (device->response_packet_magic_header)
@@ -242,25 +238,6 @@ static void pretty_print(struct wgdevice *device)
 		terminal_printf("  " TERMINAL_BOLD "h3" TERMINAL_RESET ": %u\n", device->underload_packet_magic_header);
 	if (device->transport_packet_magic_header)
 		terminal_printf("  " TERMINAL_BOLD "h4" TERMINAL_RESET ": %u\n", device->transport_packet_magic_header);
-	if (device->i1)
-		terminal_printf("  " TERMINAL_BOLD "i1" TERMINAL_RESET ": %s\n", device->i1);
-	if (device->i2)
-		terminal_printf("  " TERMINAL_BOLD "i2" TERMINAL_RESET ": %s\n", device->i2);
-	if (device->i3)
-		terminal_printf("  " TERMINAL_BOLD "i3" TERMINAL_RESET ": %s\n", device->i3);
-	if (device->i4)
-		terminal_printf("  " TERMINAL_BOLD "i4" TERMINAL_RESET ": %s\n", device->i4);
-	if (device->i5)
-		terminal_printf("  " TERMINAL_BOLD "i5" TERMINAL_RESET ": %s\n", device->i5);
-	if (device->j1)
-		terminal_printf("  " TERMINAL_BOLD "j1" TERMINAL_RESET ": %s\n", device->j1);
-	if (device->j2)
-		terminal_printf("  " TERMINAL_BOLD "j2" TERMINAL_RESET ": %s\n", device->j2);
-	if (device->j3)
-		terminal_printf("  " TERMINAL_BOLD "j3" TERMINAL_RESET ": %s\n", device->j3);
-	if (device->itime)
-		terminal_printf("  " TERMINAL_BOLD "itime" TERMINAL_RESET ": %u\n", device->itime);
-
 	if (device->first_peer) {
 		sort_peers(device);
 		terminal_printf("\n");
@@ -310,16 +287,6 @@ static void dump_print(struct wgdevice *device, bool with_interface)
 	printf("%u\t", device->response_packet_magic_header);
 	printf("%u\t", device->underload_packet_magic_header);
 	printf("%u\t", device->transport_packet_magic_header);
-	printf("%s\t", device->i1);
-	printf("%s\t", device->i2);
-	printf("%s\t", device->i3);
-	printf("%s\t", device->i4);
-	printf("%s\t", device->i5);
-	printf("%s\t", device->j1);
-	printf("%s\t", device->j2);
-	printf("%s\t", device->j3);
-	printf("%u\t", device->itime);
-
 	if (device->fwmark)
 		printf("0x%x\n", device->fwmark);
 	else
@@ -407,42 +374,6 @@ static bool ugly_print(struct wgdevice *device, const char *param, bool with_int
 		if (with_interface)
 			printf("%s\t", device->name);
 		printf("%u\n", device->transport_packet_magic_header);
-	} else if(!strcmp(param, "i1")) {
-		if (with_interface)
-			printf("%s\t", device->name);
-		printf("%s\n", device->i1);
-	} else if(!strcmp(param, "i2")) {
-		if (with_interface)
-			printf("%s\t", device->name);
-		printf("%s\n", device->i2);
-	} else if(!strcmp(param, "i3")) {
-		if (with_interface)
-			printf("%s\t", device->name);
-		printf("%s\n", device->i3);
-	} else if(!strcmp(param, "i4")) {
-		if (with_interface)
-			printf("%s\t", device->name);
-		printf("%s\n", device->i4);
-	} else if(!strcmp(param, "i5")) {
-		if (with_interface)
-			printf("%s\t", device->name);
-		printf("%s\n", device->i5);
-	} else if(!strcmp(param, "j1")) {
-		if (with_interface)
-			printf("%s\t", device->name);
-		printf("%s\n", device->j1);
-	} else if(!strcmp(param, "j2")) {
-		if (with_interface)
-			printf("%s\t", device->name);
-		printf("%s\n", device->j2);
-	} else if(!strcmp(param, "j3")) {
-		if (with_interface)
-			printf("%s\t", device->name);
-		printf("%s\n", device->j3);
-	} else if(!strcmp(param, "itime")) {
-		if (with_interface)
-			printf("%s\t", device->name);
-		printf("%u\n", device->itime);
 	 } else if (!strcmp(param, "endpoints")) {
 		for_each_wgpeer(device, peer) {
 			if (with_interface)

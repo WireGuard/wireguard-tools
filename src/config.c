@@ -677,6 +677,9 @@ bool config_read_line(struct config_ctx *ctx, const char *input)
 	size_t len, cleaned_len = 0;
 	char *line, *comment;
 	bool ret = true;
+	bool found_equals = false;
+	bool found_value_start = false;
+	size_t value_end = 0;
 
 	/* This is what strchrnul is for, but that isn't portable. */
 	comment = strchr(input, COMMENT_CHAR);
@@ -692,9 +695,35 @@ bool config_read_line(struct config_ctx *ctx, const char *input)
 		goto out;
 	}
 
-	for (size_t i = 0; i < len; ++i) {
-		if (!char_is_space(input[i]))
+	/* Remove preceding and trailing whitespaces before value
+	 First pass: find the actual end of the value (trim trailing spaces) */
+	for (size_t i = len; i > 0; --i) {
+		if (!char_is_space(input[i - 1])) {
+			value_end = i;
+			break;
+		}
+	}
+
+	/* Second pass: clean according to KEY = VALUE rules */
+	for (size_t i = 0; i < value_end; ++i) {
+		if (!found_equals) {
+			/* Before '=': remove all whitespace */
+			if (input[i] == '=') {
+				line[cleaned_len++] = input[i];
+				found_equals = true;
+			} else if (!char_is_space(input[i])) {
+				line[cleaned_len++] = input[i];
+			}
+		} else if (!found_value_start) {
+			/* After '=' but before value: skip whitespace until first non-space */
+			if (!char_is_space(input[i])) {
+				line[cleaned_len++] = input[i];
+				found_value_start = true;
+			}
+		} else {
+			/* Within value: preserve all characters including spaces */
 			line[cleaned_len++] = input[i];
+		}
 	}
 
 	if (!cleaned_len)

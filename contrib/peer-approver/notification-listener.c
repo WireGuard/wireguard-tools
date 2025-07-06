@@ -116,19 +116,18 @@ static int get_endpoint(struct nlattr *peer[], char **endpoint_ip)
 	return 0;
 }
 
-static int run_callback(char *ifname, char *pubkey, char *endpoint_ip, bool advanced_security, bool special_handshake)
+static int run_callback(char *ifname, char *pubkey, char *endpoint_ip, bool advanced_security)
 {
 	char** new_argv = malloc((cb_argc + 2) * sizeof *new_argv);
 
 	new_argv[0] = cb_argv[1];
-	for (int i = 2; i < cb_argc - 4; i++) {
+	for (int i = 2; i < cb_argc - 3; i++) {
 		new_argv[i - 1] = cb_argv[i];
 	}
-	new_argv[cb_argc - 5] = ifname;
-	new_argv[cb_argc - 4] = pubkey;
-	new_argv[cb_argc - 3] = endpoint_ip;
-	new_argv[cb_argc - 2] = (advanced_security ? "on\0" : "off\0");
-	new_argv[cb_argc - 1] = (special_handshake ? "on\0" : "off\0");
+	new_argv[cb_argc - 4] = ifname;
+	new_argv[cb_argc - 3] = pubkey;
+	new_argv[cb_argc - 2] = endpoint_ip;
+	new_argv[cb_argc - 1] = (advanced_security ? "on\0" : "off\0");
 	new_argv[cb_argc] = NULL;
 
 	int child_pid = fork(), ret;
@@ -157,7 +156,6 @@ static int netlink_callback(struct nl_msg *msg, void *arg)
 
 	char *ifname, *pubkey, *endpoint_ip;
 	bool advanced_security = false;
-	bool special_handshake = false;
 	int cb_ret;
 
 	switch (gnlh->cmd) {
@@ -181,10 +179,7 @@ static int netlink_callback(struct nl_msg *msg, void *arg)
 			if (nla_get_flag(peer[WGPEER_A_ADVANCED_SECURITY])) {
 				advanced_security = true;
 			}
-			if (nla_get_flag(peer[WGPEER_A_SPECIAL_HANDSHAKE])) {
-				special_handshake = true;
-			}
-			if (cb_ret = run_callback(ifname, pubkey, endpoint_ip, advanced_security, special_handshake)) {
+			if (cb_ret = run_callback(ifname, pubkey, endpoint_ip, advanced_security)) {
 				prerr("failed to execute callback script: %d!\n", cb_ret);
 				return NL_SKIP;
 			}

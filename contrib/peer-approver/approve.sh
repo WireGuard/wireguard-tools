@@ -5,7 +5,6 @@ INTERFACE_NAME=$2
 PUBLIC_KEY=$3
 ENDPOINT=$4
 ADVANCED_SECURITY=$5
-SPECIAL_HANDSHAKE=$6
 
 ACCOUNT_STR=`grep "${PUBLIC_KEY}" "${ACCOUNTS_FILE}"`
 
@@ -20,7 +19,7 @@ PSK=$(echo ${ACCOUNT[2]}|tr -d '"')
 PSK_FILE=$(tempfile)
 echo "${PSK}" > "${PSK_FILE}"
 
-awg set "${INTERFACE_NAME}" peer "${PUBLIC_KEY}" allowed-ips "${ALLOWED_IPS}" endpoint "${ENDPOINT}" allowed-ips "${ALLOWED_IPS}" preshared-key "${PSK_FILE}" advanced-security "${ADVANCED_SECURITY}" special-handshake "${SPECIAL_HANDSHAKE}"
+awg set "${INTERFACE_NAME}" peer "${PUBLIC_KEY}" allowed-ips "${ALLOWED_IPS}" endpoint "${ENDPOINT}" allowed-ips "${ALLOWED_IPS}" preshared-key "${PSK_FILE}" advanced-security "${ADVANCED_SECURITY}"
 EXIT_CODE=$?
 
 rm -f "{$PSK_FILE}"

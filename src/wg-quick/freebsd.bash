@@ -28,7 +28,7 @@ CONFIG_FILE=""
 PROGRAM="${0##*/}"
 ARGS=( "$@" )
 
-IS_ASESCURITY_ON=0
+IS_AWG_ON=0
 
 cmd() {
 	echo "[#] $*" >&3
@@ -104,10 +104,17 @@ parse_options() {
 			Jmax);&
 			S1);&
 			S2);&
+			S3);&
+			S4);&
 			H1);&
 			H2);&
 			H3);&
-			H4) IS_ASESCURITY_ON=1;;
+			H4);&
+			I1);&
+			I2);&
+			I3);&
+			I4);&
+			I5) IS_AWG_ON=1;;
 			esac
 		fi
 		WG_CONFIG+="$line"$'\n'
@@ -130,7 +137,7 @@ auto_su() {
 add_if() {
 	local ret rc
 	local cmd="ifconfig wg create name "$INTERFACE""
-	if [[ $IS_ASESCURITY_ON == 1 ]]; then
+	if [[ $IS_AWG_ON == 1 ]]; then
 		cmd="amneziawg-go "$INTERFACE"";
 	fi
 	if ret="$(cmd $cmd 2>&1 >/dev/null)"; then

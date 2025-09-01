@@ -11,7 +11,7 @@ while read -r -d $'\t' device; do
 	if [[ $device != "$last_device" ]]; then
 		[[ -z $last_device ]] && printf '\n' || printf '%s,\n' "$end"
 		last_device="$device"
-		read -r private_key public_key listen_port jc jmin jmax s1 s2 h1 h2 h3 h4 fwmark
+		read -r private_key public_key listen_port jc jmin jmax s1 s2 s3 s4 h1 h2 h3 h4 i1 i2 i3 i4 i5 fwmark
 		printf '\t"%s": {' "$device"
 		delim=$'\n'
 		[[ $private_key == "(none)" ]] || { printf '%s\t\t"privateKey": "%s"' "$delim" "$private_key"; delim=$',\n'; }
@@ -22,10 +22,17 @@ while read -r -d $'\t' device; do
 		[[ $jmax == "0" ]] || { printf '%s\t\t"jmax": %u' "$delim" $(( $jmax )); delim=$',\n'; }
 		[[ $s1 == "0" ]] || { printf '%s\t\t"s1": %u' "$delim" $(( $s1 )); delim=$',\n'; }
 		[[ $s2 == "0" ]] || { printf '%s\t\t"s2": %u' "$delim" $(( $s2 )); delim=$',\n'; }
-		[[ $h1 == "1" ]] || { printf '%s\t\t"h1": %u' "$delim" $(( $h1 )); delim=$',\n'; }
-		[[ $h2 == "2" ]] || { printf '%s\t\t"h2": %u' "$delim" $(( $h2 )); delim=$',\n'; }
-		[[ $h3 == "3" ]] || { printf '%s\t\t"h3": %u' "$delim" $(( $h3 )); delim=$',\n'; }
-		[[ $h4 == "4" ]] || { printf '%s\t\t"h4": %u' "$delim" $(( $h4 )); delim=$',\n'; }
+		[[ $s3 == "0" ]] || { printf '%s\t\t"s3": %u' "$delim" $(( $s3 )); delim=$',\n'; }
+		[[ $s4 == "0" ]] || { printf '%s\t\t"s4": %u' "$delim" $(( $s4 )); delim=$',\n'; }
+		[[ $h1 == "1" ]] || { printf '%s\t\t"h1": "%s"' "$delim" "$h1"; delim=$',\n'; }
+		[[ $h2 == "2" ]] || { printf '%s\t\t"h2": "%s"' "$delim" "$h2"; delim=$',\n'; }
+		[[ $h3 == "3" ]] || { printf '%s\t\t"h3": "%s"' "$delim" "$h3"; delim=$',\n'; }
+		[[ $h4 == "4" ]] || { printf '%s\t\t"h4": "%s"' "$delim" "$h4"; delim=$',\n'; }
+		[[ $i1 == "(none)" ]] || { printf '%s\t\t"i1": "%s"' "$delim" "$i1"; delim=$',\n'; }
+		[[ $i2 == "(none)" ]] || { printf '%s\t\t"i2": "%s"' "$delim" "$i2"; delim=$',\n'; }
+		[[ $i3 == "(none)" ]] || { printf '%s\t\t"i3": "%s"' "$delim" "$i3"; delim=$',\n'; }
+		[[ $i4 == "(none)" ]] || { printf '%s\t\t"i4": "%s"' "$delim" "$i4"; delim=$',\n'; }
+		[[ $i5 == "(none)" ]] || { printf '%s\t\t"i5": "%s"' "$delim" "$i5"; delim=$',\n'; }
 		[[ $fwmark == "off" ]] || { printf '%s\t\t"fwmark": %u' "$delim" $(( $fwmark )); delim=$',\n'; }
 		printf '%s\t\t"peers": {' "$delim"; end=$'\n\t\t}\n\t}'
 		delim=$'\n'

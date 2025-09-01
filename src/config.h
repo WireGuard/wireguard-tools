@@ -19,6 +19,7 @@ struct config_ctx {
 	bool is_peer_section, is_device_section;
 };
 
+size_t clean_special_handshake_line(const char *input, size_t len, char *line);
 struct wgdevice *config_read_cmd(const char *argv[], int argc);
 bool config_read_init(struct config_ctx *ctx, bool append);
 bool config_read_line(struct config_ctx *ctx, const char *line);

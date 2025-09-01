@@ -116,7 +116,7 @@ static int get_endpoint(struct nlattr *peer[], char **endpoint_ip)
 	return 0;
 }
 
-static int run_callback(char *ifname, char *pubkey, char *endpoint_ip, bool advanced_security)
+static int run_callback(char *ifname, char *pubkey, char *endpoint_ip, bool is_awg)
 {
 	char** new_argv = malloc((cb_argc + 2) * sizeof *new_argv);
 
@@ -127,7 +127,7 @@ static int run_callback(char *ifname, char *pubkey, char *endpoint_ip, bool adva
 	new_argv[cb_argc - 4] = ifname;
 	new_argv[cb_argc - 3] = pubkey;
 	new_argv[cb_argc - 2] = endpoint_ip;
-	new_argv[cb_argc - 1] = (advanced_security ? "on\0" : "off\0");
+	new_argv[cb_argc - 1] = (is_awg ? "on\0" : "off\0");
 	new_argv[cb_argc] = NULL;
 
 	int child_pid = fork(), ret;
@@ -155,7 +155,7 @@ static int netlink_callback(struct nl_msg *msg, void *arg)
 	nla_parse(tb, WGDEVICE_A_MAX, genlmsg_attrdata(gnlh, 0), genlmsg_attrlen(gnlh, 0), NULL);
 
 	char *ifname, *pubkey, *endpoint_ip;
-	bool advanced_security = false;
+	bool is_awg = false;
 	int cb_ret;
 
 	switch (gnlh->cmd) {
@@ -176,10 +176,10 @@ static int netlink_callback(struct nl_msg *msg, void *arg)
 				prerr("invalid endpoint!\n");
 				return NL_SKIP;
 			}
-			if (nla_get_flag(peer[WGPEER_A_ADVANCED_SECURITY])) {
-				advanced_security = true;
+			if (nla_get_flag(peer[WGPEER_A_AWG])) {
+				is_awg = true;
 			}
-			if (cb_ret = run_callback(ifname, pubkey, endpoint_ip, advanced_security)) {
+			if (cb_ret = run_callback(ifname, pubkey, endpoint_ip, is_awg)) {
 				prerr("failed to execute callback script: %d!\n", cb_ret);
 				return NL_SKIP;
 			}

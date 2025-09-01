@@ -66,7 +66,14 @@ typedef enum
 	WG_IOCTL_INTERFACE_H1 = 1 << 10,
 	WG_IOCTL_INTERFACE_H2 = 1 << 11,
 	WG_IOCTL_INTERFACE_H3 = 1 << 12,
-	WG_IOCTL_INTERFACE_H4 = 1 << 13
+	WG_IOCTL_INTERFACE_H4 = 1 << 13,
+	WG_IOCTL_INTERFACE_S3 = 1 << 14, // needs to be set in order of implementation for backward compatibility
+	WG_IOCTL_INTERFACE_S4 = 1 << 15,
+	WG_IOCTL_INTERFACE_I1 = 1U << 16,
+	WG_IOCTL_INTERFACE_I2 = 1U << 17,
+	WG_IOCTL_INTERFACE_I3 = 1U << 18,
+	WG_IOCTL_INTERFACE_I4 = 1U << 19,
+	WG_IOCTL_INTERFACE_I5 = 1U << 20
 } WG_IOCTL_INTERFACE_FLAG;
 
 typedef struct _WG_IOCTL_INTERFACE
@@ -81,10 +88,18 @@ typedef struct _WG_IOCTL_INTERFACE
 	USHORT JunkPacketMaxSize;
 	USHORT InitPacketJunkSize;
 	USHORT ResponsePacketJunkSize;
-	ULONG InitPacketMagicHeader;
-	ULONG ResponsePacketMagicHeader;
-	ULONG UnderloadPacketMagicHeader;
-	ULONG TransportPacketMagicHeader;
+	USHORT CookieReplyPacketJunkSize;
+	USHORT TransportPacketJunkSize;
+	UCHAR* InitPacketMagicHeader;
+	UCHAR* ResponsePacketMagicHeader;
+	UCHAR* UnderloadPacketMagicHeader;
+	UCHAR* TransportPacketMagicHeader;
+
+	UCHAR* I1;
+	UCHAR* I2;
+	UCHAR* I3;
+	UCHAR* I4;
+	UCHAR* I5;
 } __attribute__((aligned(8))) WG_IOCTL_INTERFACE;
 
 #define WG_IOCTL_GET CTL_CODE(45208U, 321, METHOD_OUT_DIRECT, FILE_READ_DATA | FILE_WRITE_DATA)

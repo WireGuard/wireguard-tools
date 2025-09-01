@@ -67,20 +67,27 @@ struct wg_peer_io {
     struct wg_aip_io	p_aips[];
 };
 
-#define WG_INTERFACE_HAS_PUBLIC		 (1 << 0)
-#define WG_INTERFACE_HAS_PRIVATE	 (1 << 1)
-#define WG_INTERFACE_HAS_PORT		 (1 << 2)
-#define WG_INTERFACE_HAS_RTABLE		 (1 << 3)
-#define WG_INTERFACE_REPLACE_PEERS	 (1 << 4)
-#define WG_INTERFACE_DEVICE_HAS_JC 	 (1 << 5)
+#define WG_INTERFACE_HAS_PUBLIC    (1 << 0)
+#define WG_INTERFACE_HAS_PRIVATE   (1 << 1)
+#define WG_INTERFACE_HAS_PORT      (1 << 2)
+#define WG_INTERFACE_HAS_RTABLE    (1 << 3)
+#define WG_INTERFACE_REPLACE_PEERS (1 << 4)
+#define WG_INTERFACE_DEVICE_HAS_JC (1 << 5)
 #define WG_INTERFACE_DEVICE_HAS_JMIN (1 << 6)
 #define WG_INTERFACE_DEVICE_HAS_JMAX (1 << 7)
-#define WG_INTERFACE_DEVICE_HAS_S1	 (1 << 8)
-#define WG_INTERFACE_DEVICE_HAS_S2	 (1 << 9)
-#define WG_INTERFACE_DEVICE_HAS_H1	 (1 << 10)
-#define WG_INTERFACE_DEVICE_HAS_H2	 (1 << 11)
-#define WG_INTERFACE_DEVICE_HAS_H3	 (1 << 12)
-#define WG_INTERFACE_DEVICE_HAS_H4	 (1 << 13)
+#define WG_INTERFACE_DEVICE_HAS_S1 (1 << 8)
+#define WG_INTERFACE_DEVICE_HAS_S2 (1 << 9)
+#define WG_INTERFACE_DEVICE_HAS_H1 (1 << 10)
+#define WG_INTERFACE_DEVICE_HAS_H2 (1 << 11)
+#define WG_INTERFACE_DEVICE_HAS_H3 (1 << 12)
+#define WG_INTERFACE_DEVICE_HAS_H4 (1 << 13)
+#define WG_INTERFACE_DEVICE_HAS_S3 (1 << 14) // needs to be set in order of implementation for backward compatibility
+#define WG_INTERFACE_DEVICE_HAS_S4 (1 << 15)
+#define WG_INTERFACE_DEVICE_HAS_I1 (1 << 16)
+#define WG_INTERFACE_DEVICE_HAS_I2 (1 << 17)
+#define WG_INTERFACE_DEVICE_HAS_I3 (1 << 18)
+#define WG_INTERFACE_DEVICE_HAS_I4 (1 << 19)
+#define WG_INTERFACE_DEVICE_HAS_I5 (1 << 20)
 
 struct wg_interface_io {
     uint16_t		i_flags;
@@ -96,10 +103,18 @@ struct wg_interface_io {
     uint16_t 			i_junk_packet_max_size;
     uint16_t 			i_init_packet_junk_size;
     uint16_t 			i_response_packet_junk_size;
-    uint32_t 			i_init_packet_magic_header;
-    uint32_t 			i_response_packet_magic_header;
-    uint32_t 			i_underload_packet_magic_header;
-    uint32_t 			i_transport_packet_magic_header;
+    uint16_t 			i_cookie_reply_packet_junk_size;
+    uint16_t 			i_transport_packet_junk_size;
+    uint8_t* 			i_init_packet_magic_header;
+    uint8_t* 			i_response_packet_magic_header;
+    uint8_t* 			i_underload_packet_magic_header;
+    uint8_t* 			i_transport_packet_magic_header;
+
+    uint8_t* i_i1;
+    uint8_t* i_i2;
+    uint8_t* i_i3;
+    uint8_t* i_i4;
+    uint8_t* i_i5;
 };
 
 struct wg_data_io {

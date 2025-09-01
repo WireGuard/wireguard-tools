@@ -56,14 +56,28 @@ int showconf_main(int argc, const char *argv[])
 		printf("S1 = %u\n", device->init_packet_junk_size);
 	if (device->flags & WGDEVICE_HAS_S2)
 		printf("S2 = %u\n", device->response_packet_junk_size);
+	if (device->flags & WGDEVICE_HAS_S3)
+		printf("S3 = %u\n", device->cookie_reply_packet_junk_size);
+	if (device->flags & WGDEVICE_HAS_S4)
+		printf("S4 = %u\n", device->transport_packet_junk_size);
 	if (device->flags & WGDEVICE_HAS_H1)
-		printf("H1 = %u\n", device->init_packet_magic_header);
+		printf("H1 = %s\n", device->init_packet_magic_header);
 	if (device->flags & WGDEVICE_HAS_H2)
-		printf("H2 = %u\n", device->response_packet_magic_header);
+		printf("H2 = %s\n", device->response_packet_magic_header);
 	if (device->flags & WGDEVICE_HAS_H3)
-		printf("H3 = %u\n", device->underload_packet_magic_header);
+		printf("H3 = %s\n", device->underload_packet_magic_header);
 	if (device->flags & WGDEVICE_HAS_H4)
-		printf("H4 = %u\n", device->transport_packet_magic_header);
+		printf("H4 = %s\n", device->transport_packet_magic_header);
+	if (device->flags & WGDEVICE_HAS_I1)
+		printf("I1 = %s\n", device->i1);
+	if (device->flags & WGDEVICE_HAS_I2)
+		printf("I2 = %s\n", device->i2);
+	if (device->flags & WGDEVICE_HAS_I3)
+		printf("I3 = %s\n", device->i3);
+	if (device->flags & WGDEVICE_HAS_I4)
+		printf("I4 = %s\n", device->i4);
+	if (device->flags & WGDEVICE_HAS_I5)
+		printf("I5 = %s\n", device->i5);
 
 	printf("\n");
 	for_each_wgpeer(device, peer) {
@@ -73,8 +87,8 @@ int showconf_main(int argc, const char *argv[])
 			key_to_base64(base64, peer->preshared_key);
 			printf("PresharedKey = %s\n", base64);
 		}
-		if (peer->flags & WGPEER_HAS_ADVANCED_SECURITY) {
-			printf("AdvancedSecurity = %s\n", peer->advanced_security ? "on" : "off");
+		if (peer->flags & WGPEER_HAS_AWG) {
+			printf("AdvancedSecurity = %s\n", peer->awg ? "on" : "off");
 		}
 		if (peer->first_allowedip)
 			printf("AllowedIPs = ");

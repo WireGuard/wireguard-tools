@@ -458,24 +458,6 @@ static inline bool parse_uint16(uint16_t *device_value, const char *name, const 
 	return true;
 }
 
-static inline bool parse_uint32(uint32_t *device_value, const char *name, const char *value) {
-
-	if (!strlen(value)) {
-		fprintf(stderr, "Unable to parse empty string\n");
-		return false;
-	}
-
-	char *end;
-	uint64_t ret;
-	ret = strtoul(value, &end, 10);
-	if (*end || ret > UINT32_MAX) {
-		fprintf(stderr, "Unable to parse %s: `%s'\n", name, value);
-		exit(1);
-	}
-	*device_value = (uint32_t)ret;
-	return true;
-}
-
 static inline bool parse_bool(bool *device_value, const char *name, const char *value) {
 
 	if (!strlen(value)) {

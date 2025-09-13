@@ -177,7 +177,7 @@ set_mtu() {
 		cmd ifconfig "$REAL_INTERFACE" mtu "$MTU"
 		return
 	fi
-	while read -r destination _ _ _ _ netif _; do
+	while read -r destination _ _ netif _; do
 		if [[ $destination == default ]]; then
 			defaultif="$netif"
 			break

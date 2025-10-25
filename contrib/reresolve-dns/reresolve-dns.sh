@@ -8,14 +8,31 @@ shopt -s nocasematch
 shopt -s extglob
 export LC_ALL=C
 
+show_usage() {
+	printf "%sUSAGE:%s %s <config-file> [<interface>]%s\n" \
+		"$(tput smul)$(tput setaf 3)" "$(tput rmul)" \
+		"$(basename "$0")" "$(tput sgr0)"
+	if [ -n "$INTERFACE" ]; then
+		printf "%s(Note that in your invocation, <interface> was set to '$INTERFACE')%s\n" \
+			"$(tput dim)$(tput setaf 3)" "$(tput sgr0)"
+	fi
+	exit 0
+}
+
 CONFIG_FILE="$1"
 [[ $CONFIG_FILE =~ ^[a-zA-Z0-9_=+.-]{1,15}$ ]] && CONFIG_FILE="/etc/wireguard/$CONFIG_FILE.conf"
 [[ $CONFIG_FILE =~ /?([a-zA-Z0-9_=+.-]{1,15})\.conf$ ]]
+
+if ! [ -f "$CONFIG_FILE" ]; then show_usage; fi 
+
 INTERFACE="${BASH_REMATCH[1]}"
+INTERFACE="${2:-$INTERFACE}"
 
 process_peer() {
 	[[ $PEER_SECTION -ne 1 || -z $PUBLIC_KEY || -z $ENDPOINT ]] && return 0
-	[[ $(wg show "$INTERFACE" latest-handshakes) =~ ${PUBLIC_KEY//+/\\+}\	([0-9]+) ]] || return 0
+	LATEST_HANDSHAKE="$(wg show "$INTERFACE" latest-handshakes 2>/dev/null || true)"
+	if [ -z "$LATEST_HANDSHAKE" ]; then show_usage; fi 
+	[[ "$LATEST_HANDSHAKE" =~ ${PUBLIC_KEY//+/\\+}\	([0-9]+) ]] || return 0
 	(( ($EPOCHSECONDS - ${BASH_REMATCH[1]}) > 135 )) || return 0
 	wg set "$INTERFACE" peer "$PUBLIC_KEY" endpoint "$ENDPOINT"
 	reset_peer_section

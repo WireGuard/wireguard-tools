@@ -9,12 +9,16 @@ shopt -s extglob
 export LC_ALL=C
 
 show_usage() {
-	printf "%sUSAGE:%s %s <config-file> [<interface>]%s\n" \
-		"$(tput smul)$(tput setaf 3)" "$(tput rmul)" \
-		"$(basename "$0")" "$(tput sgr0)"
-	if [ -n "$INTERFACE" ]; then
-		printf "%s(Note that in your invocation, <interface> was set to '$INTERFACE')%s\n" \
-			"$(tput dim)$(tput setaf 3)" "$(tput sgr0)"
+	if [ -t 1 ]; then
+		printf "%sUSAGE:%s %s <config-file> [<interface>]%s\n" \
+			"$(tput smul)$(tput setaf 3)" "$(tput rmul)" \
+			"$(basename "$0")" "$(tput sgr0)"
+		if [ -n "$INTERFACE" ]; then
+			printf "%s(Note that in your invocation, <interface> was set to '$INTERFACE')%s\n" \
+				"$(tput dim)$(tput setaf 3)" "$(tput sgr0)"
+		fi
+	else
+		printf "ERROR: %s\n" "$0"
 	fi
 	exit 0
 }
@@ -35,6 +39,9 @@ process_peer() {
 	[[ "$LATEST_HANDSHAKE" =~ ${PUBLIC_KEY//+/\\+}\	([0-9]+) ]] || return 0
 	(( ($EPOCHSECONDS - ${BASH_REMATCH[1]}) > 135 )) || return 0
 	wg set "$INTERFACE" peer "$PUBLIC_KEY" endpoint "$ENDPOINT"
+	if ! [ -t 1 ]; then
+		printf "HANDSHAKES STOPPED: RE-RESOLVING ENDPOINT '%s'\n" "$ENDPOINT"
+	fi
 	reset_peer_section
 }
 

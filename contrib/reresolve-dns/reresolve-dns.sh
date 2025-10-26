@@ -3,10 +3,15 @@
 #
 # Copyright (C) 2015-2020 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 
+if [ -n "$DEBUG" ]; then set -x; fi
+
 set -e
 shopt -s nocasematch
 shopt -s extglob
 export LC_ALL=C
+
+# Fix for bash 3
+EPOCHSECONDS=$(date +'%s')
 
 show_usage() {
 	if [ -t 1 ]; then
@@ -24,10 +29,10 @@ show_usage() {
 }
 
 CONFIG_FILE="$1"
+if ! [ -f "$CONFIG_FILE" ]; then show_usage; fi 
+
 [[ $CONFIG_FILE =~ ^[a-zA-Z0-9_=+.-]{1,15}$ ]] && CONFIG_FILE="/etc/wireguard/$CONFIG_FILE.conf"
 [[ $CONFIG_FILE =~ /?([a-zA-Z0-9_=+.-]{1,15})\.conf$ ]]
-
-if ! [ -f "$CONFIG_FILE" ]; then show_usage; fi 
 
 INTERFACE="${BASH_REMATCH[1]}"
 INTERFACE="${2:-$INTERFACE}"

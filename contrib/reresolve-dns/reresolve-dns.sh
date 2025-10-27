@@ -19,6 +19,7 @@ if [ -n "$DEBUG" ]; then
 	trap "set +x; printf 'PATH=%s\n' \"$PATH\" >&2; id >&2; date >&2" EXIT
 fi
 
+set -e
 shopt -s nocasematch
 shopt -s extglob
 export LC_ALL=C

@@ -2,11 +2,16 @@
 set -euo pipefail
 
 # Simple smoke test: build the `wg` binary and verify `--show-keys` appears
-# in the `wg show --help` output. This runs locally and is intentionally
-# lightweight (does not require creating kernel devices).
+# in the `wg show --help` output. This runs from the repository root so it
+# works when invoked from CI or the workspace root.
 
-cd src
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SRC_DIR="${REPO_ROOT}/src"
+
+echo "Repository root: ${REPO_ROOT}"
 echo "Building src/... (this may take a moment)"
+cd "${SRC_DIR}"
 make V=1
 
 echo "Checking help for --show-keys"

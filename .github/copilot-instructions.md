@@ -106,3 +106,50 @@ for (int i = 1; i < argc; ++i) {
 ```
 
 Keep changes small and follow existing formatting and error handling patterns.
+
+## Walkthrough — Add a `uapi/<platform>/` header
+
+Use this when you need to add platform-specific kernel/user API headers
+that the `src/` build will include via `-isystem uapi/$(PLATFORM)`.
+
+- Files to edit: create `uapi/<platform>/linux/wireguard.h` (or matching
+  platform path) and keep contents aligned with kernel headers.
+- Typical steps:
+  1. Duplicate the closest existing platform header under `uapi/` and
+    adapt only the necessary differences. The project expects these
+    headers to match the kernel WireGuard API.
+  2. Update `src/Makefile` only if you need to add a new install step
+    for the header; usually `-isystem uapi/$(PLATFORM)` is sufficient.
+  3. Build locally: `cd src && make V=1` and ensure the compiler uses
+    the `uapi/` header (compiler include paths appear with `V=1`).
+  4. Add tests or mention kernel version differences in the PR description
+    when the header intentionally diverges from upstream kernel headers.
+
+## Commit & DCO checklist
+
+Before pushing, ensure commits are signed off to satisfy the DCO bot:
+
+- Set git identity (one-time):
+
+```bash
+git config user.name "Your Name"
+git config user.email "you@example.com"
+```
+
+- Make a commit and sign-off:
+
+```bash
+git add <files>
+git commit -s -m "docs: update copilot instructions (concise)"
+```
+
+- If DCO fails on the PR, amend the offending commit with a sign-off and force-push:
+
+```bash
+git commit --amend --no-edit --signoff
+git push --force-with-lease
+```
+
+- Use `gh` to open the PR or post follow-up comments if you fix DCO or CI.
+
+This checklist is intentionally minimal — use it to avoid common DCO issues.

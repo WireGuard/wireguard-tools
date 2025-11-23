@@ -206,11 +206,9 @@ static char *bytes(uint64_t b)
 static const char *COMMAND_NAME;
 static void show_usage(void)
 {
-	fprintf(stderr, "Usage: %s %s { <interface> | all | interfaces } [public-key | private-key | listen-port | fwmark | peers | preshared-keys | endpoints | allowed-ips | latest-handshakes | transfer | persistent-keepalive | dump]\n", PROG_NAME, COMMAND_NAME);
-	fprintf(stderr, "Optional flags: --show-keys\n");
-}
 	fprintf(stderr, "Usage: %s %s [--show-keys] { <interface> | all | interfaces } [public-key | private-key | listen-port | fwmark | peers | preshared-keys | endpoints | allowed-ips | latest-handshakes | transfer | persistent-keepalive | dump]\n", PROG_NAME, COMMAND_NAME);
 	fprintf(stderr, "Options:\n  --show-keys    Reveal keys temporarily for debugging (respects WG_HIDE_KEYS=never)\n");
+}
 static void pretty_print(struct wgdevice *device)
 {
 	struct wgpeer *peer;

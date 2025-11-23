@@ -71,3 +71,38 @@ project conventions that differ from typical C projects.
 If you'd like, I can (a) shorten or expand any section, (b) add a short
 walkthrough for adding a CLI flag in `wg.c`, or (c) include a sample PR
 checklist. Which would you prefer?
+
+## Walkthrough — Add a small CLI flag to an existing subcommand
+
+Example: add a simple `--example-flag` to the `show` subcommand.
+
+- Files to edit: `src/show.c` (subcommand implementation) and, if needed,
+  tests or `man/` pages.
+- Typical steps:
+  1. Locate the subcommand entry in `src/wg.c` (the `subcommands[]` table lists
+    available subcommands and their `*_main` functions; `show` maps to `show_main`).
+  2. Open `src/show.c` and find `show_main` — it handles argc/argv for `show`.
+  3. Add minimal flag parsing near the top of `show_main`. This project uses
+    simple `argv` checks rather than a heavy option parser; follow existing
+    patterns (see checks for `argc` and `argv[1]` already in `show_main`).
+  4. Implement the behavior (set a local `bool` or configuration struct and
+    branch later in the printing functions such as `pretty_print` or
+    `ugly_print`).
+  5. Build and run the subcommand locally: `cd src && make V=1 && ./wg show --help`.
+  6. Run `make check` if you changed parsing or memory handling.
+
+- Minimal illustrative code sketch (adapt to project's helpers):
+
+```c
+// in src/show.c, inside show_main before printing
+bool example_flag = false;
+for (int i = 1; i < argc; ++i) {
+   if (!strcmp(argv[i], "--example-flag")) {
+      example_flag = true;
+      // optionally remove the consumed arg or shift argv
+   }
+}
+// Later, in pretty_print or dump_print, use `example_flag` to alter output
+```
+
+Keep changes small and follow existing formatting and error handling patterns.

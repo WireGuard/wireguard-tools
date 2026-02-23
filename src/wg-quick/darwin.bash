@@ -28,6 +28,7 @@ SAVE_CONFIG=0
 CONFIG_FILE=""
 PROGRAM="${0##*/}"
 ARGS=( "$@" )
+IS_FINISHED=0
 
 cmd() {
 	echo "[#] $*" >&2
@@ -293,20 +294,22 @@ set_endpoint_direct_route() {
 }
 
 set_dns() {
-	collect_new_service_dns
-	local service response
-	for service in "${!SERVICE_DNS[@]}"; do
-		while read -r response; do
-			[[ $response == *Error* ]] && echo "$response" >&2
-		done < <(
-			cmd networksetup -setdnsservers "$service" "${DNS[@]}"
-			if [[ ${#DNS_SEARCH[@]} -eq 0 ]]; then
-				cmd networksetup -setsearchdomains "$service" Empty
-			else
-				cmd networksetup -setsearchdomains "$service" "${DNS_SEARCH[@]}"
-			fi
-		)
-	done
+  if [[ $IS_FINISHED -eq 0 ]]; then
+    collect_new_service_dns
+    local service response
+    for service in "${!SERVICE_DNS[@]}"; do
+      while read -r response; do
+        [[ $response == *Error* ]] && echo "$response" >&2
+      done < <(
+        cmd networksetup -setdnsservers "$service" "${DNS[@]}"
+        if [[ ${#DNS_SEARCH[@]} -eq 0 ]]; then
+          cmd networksetup -setsearchdomains "$service" Empty
+        else
+          cmd networksetup -setsearchdomains "$service" "${DNS_SEARCH[@]}"
+        fi
+      )
+    done
+  fi
 }
 
 del_dns() {
@@ -323,7 +326,7 @@ del_dns() {
 
 monitor_daemon() {
 	echo "[+] Backgrounding route monitor" >&2
-	(trap 'del_routes; del_dns; exit 0' INT TERM EXIT
+	(trap 'IS_FINISHED=1; del_routes; del_dns; exit 0' INT TERM EXIT
 	exec >/dev/null 2>&1
 	exec 19< <(exec route -n monitor)
 	local event bpid=$BASHPID mpid=$!

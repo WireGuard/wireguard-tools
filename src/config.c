@@ -506,8 +506,9 @@ error:
 bool config_read_line(struct config_ctx *ctx, const char *input)
 {
 	size_t len, cleaned_len = 0;
-	char *line, *comment;
+	const char *comment;
 	bool ret = true;
+	char *line;
 
 	/* This is what strchrnul is for, but that isn't portable. */
 	comment = strchr(input, COMMENT_CHAR);

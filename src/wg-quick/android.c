@@ -997,7 +997,7 @@ static void set_mtu(const char *iface, unsigned int mtu)
 	int endpoint_mtu, next_mtu;
 
 	if (mtu) {
-		cndc("interface setmtu %s %u", iface, mtu);
+		cmd("ip link set dev %s mtu %d", iface, mtu);
 		return;
 	}
 
@@ -1018,7 +1018,7 @@ static void set_mtu(const char *iface, unsigned int mtu)
 			endpoint_mtu = next_mtu;
 	}
 
-	cndc("interface setmtu %s %d", iface, endpoint_mtu - 80);
+	cmd("ip link set dev %s mtu %d", iface, endpoint_mtu - 80);
 }
 
 static void add_route(const char *iface, unsigned int netid, const char *route)

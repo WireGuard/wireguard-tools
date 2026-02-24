@@ -24,6 +24,8 @@
 #include "encoding.h"
 #include "subcommands.h"
 
+static bool show_keys = false;
+
 static int peer_cmp(const void *first, const void *second)
 {
 	time_t diff;
@@ -86,6 +88,8 @@ static const char *masked_key(const uint8_t masked_key[static WG_KEY_LEN])
 {
 	const char *var = getenv("WG_HIDE_KEYS");
 
+	if (show_keys)
+		return key(masked_key);
 	if (var && !strcmp(var, "never"))
 		return key(masked_key);
 	return "(hidden)";
@@ -202,9 +206,9 @@ static char *bytes(uint64_t b)
 static const char *COMMAND_NAME;
 static void show_usage(void)
 {
-	fprintf(stderr, "Usage: %s %s { <interface> | all | interfaces } [public-key | private-key | listen-port | fwmark | peers | preshared-keys | endpoints | allowed-ips | latest-handshakes | transfer | persistent-keepalive | dump]\n", PROG_NAME, COMMAND_NAME);
+	fprintf(stderr, "Usage: %s %s [--show-keys] { <interface> | all | interfaces } [public-key | private-key | listen-port | fwmark | peers | preshared-keys | endpoints | allowed-ips | latest-handshakes | transfer | persistent-keepalive | dump]\n", PROG_NAME, COMMAND_NAME);
+	fprintf(stderr, "Options:\n  --show-keys    Reveal keys temporarily for debugging (respects WG_HIDE_KEYS=never)\n");
 }
-
 static void pretty_print(struct wgdevice *device)
 {
 	struct wgpeer *peer;
@@ -382,12 +386,28 @@ int show_main(int argc, const char *argv[])
 
 	COMMAND_NAME = argv[0];
 
-	if (argc > 3) {
+	/* Build a local argv that filters out recognized flags (currently
+	 * only `--show-keys`) so the remainder of the function can assume
+	 * positional parameters as before. */
+	const char *local_argv[4];
+	int local_argc = 0;
+
+	local_argv[0] = argv[0];
+	local_argc = 1;
+	for (int i = 1; i < argc; ++i) {
+		if (!strcmp(argv[i], "--show-keys")) {
+			show_keys = true;
+			continue;
+		}
+		local_argv[local_argc++] = argv[i];
+	}
+
+	if (local_argc > 3) {
 		show_usage();
 		return 1;
 	}
 
-	if (argc == 1 || !strcmp(argv[1], "all")) {
+	if (local_argc == 1 || !strcmp(local_argv[1], "all")) {
 		char *interfaces = ipc_list_devices(), *interface;
 
 		if (!interfaces) {
@@ -403,8 +423,8 @@ int show_main(int argc, const char *argv[])
 				fprintf(stderr, "Unable to access interface %s: %s\n", interface, strerror(errno));
 				continue;
 			}
-			if (argc == 3) {
-				if (!ugly_print(device, argv[2], true)) {
+			if (local_argc == 3) {
+				if (!ugly_print(device, local_argv[2], true)) {
 					ret = 1;
 					free_wgdevice(device);
 					break;
@@ -418,10 +438,10 @@ int show_main(int argc, const char *argv[])
 			ret = 0;
 		}
 		free(interfaces);
-	} else if (!strcmp(argv[1], "interfaces")) {
+	} else if (!strcmp(local_argv[1], "interfaces")) {
 		char *interfaces, *interface;
 
-		if (argc > 2) {
+		if (local_argc > 2) {
 			show_usage();
 			return 1;
 		}
@@ -434,17 +454,17 @@ int show_main(int argc, const char *argv[])
 		for (size_t len = 0; (len = strlen(interface)); interface += len + 1)
 			printf("%s%c", interface, strlen(interface + len + 1) ? ' ' : '\n');
 		free(interfaces);
-	} else if (argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help") || !strcmp(argv[1], "help")))
+	} else if (local_argc == 2 && (!strcmp(local_argv[1], "-h") || !strcmp(local_argv[1], "--help") || !strcmp(local_argv[1], "help")))
 		show_usage();
 	else {
 		struct wgdevice *device = NULL;
 
-		if (ipc_get_device(&device, argv[1]) < 0) {
+		if (ipc_get_device(&device, local_argv[1]) < 0) {
 			perror("Unable to access interface");
 			return 1;
 		}
-		if (argc == 3) {
-			if (!ugly_print(device, argv[2], false))
+		if (local_argc == 3) {
+			if (!ugly_print(device, local_argv[2], false))
 				ret = 1;
 		} else
 			pretty_print(device);

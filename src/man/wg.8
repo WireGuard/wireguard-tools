@@ -51,6 +51,13 @@ fwmark. Subsequent lines are printed for each peer and contain in order separate
 by tab: public-key, preshared-key, endpoint, allowed-ips, latest-handshake,
 transfer-rx, transfer-tx, persistent-keepalive.
 .TP
+\fBshow\fP [\fI--show-keys\fP] { \fI<interface>\fP | \fIall\fP | \fIinterfaces\fP } [\fIpublic-key\fP | \fIprivate-key\fP | \fIlisten-port\fP | \fIfwmark\fP | \fIpeers\fP | \fIpreshared-keys\fP | \fIendpoints\fP | \fIallowed-ips\fP | \fIlatest-handshakes\fP | \fIpersistent-keepalive\fP | \fItransfer\fP | \fIdump\fP]
+.PP
+If the special option \fI--show-keys\fP is provided before the interface
+argument, the pretty-printing output will reveal private and preshared keys
+for debugging (this respects the `WG_HIDE_KEYS=never` override). Use with care
+as keys are sensitive.
+.TP
 \fBshowconf\fP \fI<interface>\fP
 Shows the current configuration of \fI<interface>\fP in the format described
 by \fICONFIGURATION FILE FORMAT\fP below.

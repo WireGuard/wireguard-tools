@@ -7,3 +7,20 @@ changes, the kernel will get the update to the DNS entry.
 
 This works by parsing configuration files, and simply running:
     $ wg set wg0 peer ... endpoint ...
+
+
+alternative on OSX
+==================
+
+The UI integrated wireguard client on OSX does not support CLI operations
+and offers no hook scripts either. For that situation `reresolve-dns.sh`
+would not work. Instead an external reverse proxy component can be used to
+take care of the re-resolving: https://github.com/thz/dynreverse
+
+This works by running the proxy and configuring the wireguard client to use
+a localhost endpoint:
+
+    $ dynreverse reverse \
+        --listen-address 127.0.0.1:50001 \
+        --upstream-endpoint peer.example.com:51820
+    # connect wireguard to `Endpoint = 127.0.0.1:50001`

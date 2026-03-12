@@ -89,6 +89,7 @@ static int kernel_get_wireguard_interfaces(struct string_list *list)
 	nlh->nlmsg_seq = seq;
 	ifm = mnl_nlmsg_put_extra_header(nlh, sizeof(*ifm));
 	ifm->ifi_family = AF_UNSPEC;
+	mnl_attr_put_u32(nlh, IFLA_EXT_MASK, RTEXT_FILTER_SKIP_STATS);
 
 	linkinfo_nest = mnl_attr_nest_start(nlh, IFLA_LINKINFO);
 	mnl_attr_put_strz(nlh, IFLA_INFO_KIND, WG_GENL_NAME);

@@ -943,6 +943,7 @@ static int fetch_device_names(struct string_list *list)
 	int ret = 0;
 	struct nlmsghdr *nlh;
 	struct ifinfomsg *ifm;
+	struct nlattr *linkinfo_nest;
 
 	ret = -ENOMEM;
 	rtnl_buffer = calloc(mnl_ideal_socket_buffer_size(), 1);
@@ -968,6 +969,11 @@ static int fetch_device_names(struct string_list *list)
 	nlh->nlmsg_seq = seq;
 	ifm = mnl_nlmsg_put_extra_header(nlh, sizeof(*ifm));
 	ifm->ifi_family = AF_UNSPEC;
+
+	linkinfo_nest = mnl_attr_nest_start(nlh, IFLA_LINKINFO);
+	mnl_attr_put_strz(nlh, IFLA_INFO_KIND, WG_GENL_NAME);
+	mnl_attr_nest_end(nlh, linkinfo_nest);
+
 	message_len = nlh->nlmsg_len;
 
 	if (mnl_socket_sendto(nl, rtnl_buffer, message_len) < 0) {

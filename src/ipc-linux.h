@@ -29,25 +29,13 @@
 
 struct interface {
 	const char *name;
-	bool is_wireguard;
 };
-
-static int parse_linkinfo(const struct nlattr *attr, void *data)
-{
-	struct interface *interface = data;
-
-	if (mnl_attr_get_type(attr) == IFLA_INFO_KIND && !strcmp(WG_GENL_NAME, mnl_attr_get_str(attr)))
-		interface->is_wireguard = true;
-	return MNL_CB_OK;
-}
 
 static int parse_infomsg(const struct nlattr *attr, void *data)
 {
 	struct interface *interface = data;
 
-	if (mnl_attr_get_type(attr) == IFLA_LINKINFO)
-		return mnl_attr_parse_nested(attr, parse_linkinfo, data);
-	else if (mnl_attr_get_type(attr) == IFLA_IFNAME)
+	if (mnl_attr_get_type(attr) == IFLA_IFNAME)
 		interface->name = mnl_attr_get_str(attr);
 	return MNL_CB_OK;
 }
@@ -61,7 +49,7 @@ static int read_devices_cb(const struct nlmsghdr *nlh, void *data)
 	ret = mnl_attr_parse(nlh, sizeof(struct ifinfomsg), parse_infomsg, &interface);
 	if (ret != MNL_CB_OK)
 		return ret;
-	if (interface.name && interface.is_wireguard)
+	if (interface.name)
 		ret = string_list_add(list, interface.name);
 	if (ret < 0)
 		return ret;

@@ -19,11 +19,10 @@
 static bool have_cached_kernel_interfaces;
 static struct hashtable cached_kernel_interfaces;
 static const DEVPROPKEY devpkey_name = DEVPKEY_WG_NAME;
-extern bool is_win7;
 
 static int kernel_get_wireguard_interfaces(struct string_list *list)
 {
-	HDEVINFO dev_info = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, is_win7 ? L"ROOT\\WIREGUARD" : L"SWD\\WireGuard", NULL, DIGCF_PRESENT, NULL, NULL, NULL);
+	HDEVINFO dev_info = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, L"SWD\\WireGuard", NULL, DIGCF_PRESENT, NULL, NULL, NULL);
 	bool will_have_cached_kernel_interfaces = true;
 
 	if (dev_info == INVALID_HANDLE_VALUE) {
@@ -130,7 +129,7 @@ err_hash:
 		}
 	}
 
-	dev_info = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, is_win7 ? L"ROOT\\WIREGUARD" : L"SWD\\WireGuard", NULL, DIGCF_PRESENT, NULL, NULL, NULL);
+	dev_info = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, L"SWD\\WireGuard", NULL, DIGCF_PRESENT, NULL, NULL, NULL);
 	if (dev_info == INVALID_HANDLE_VALUE)
 		return NULL;
 

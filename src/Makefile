@@ -61,14 +61,14 @@ endif
 ifeq ($(PLATFORM),windows)
 CC := x86_64-w64-mingw32-clang
 WINDRES := $(shell $(CC) $(CFLAGS) -print-prog-name=windres 2>/dev/null)
-CFLAGS += -Iwincompat/include -include wincompat/compat.h -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -flto
+CFLAGS += -Iwincompat/include -include wincompat/compat.h -DWINVER=0x0A00 -D_WIN32_WINNT=0x0A00 -flto
 LDLIBS += -lws2_32 -lsetupapi -lole32 -ladvapi32 -lntdll -Lwincompat
 LDFLAGS += -flto -Wl,--dynamicbase -Wl,--nxcompat -Wl,--tsaware -mconsole
-LDFLAGS += -Wl,--major-os-version=6 -Wl,--minor-os-version=1 -Wl,--major-subsystem-version=6 -Wl,--minor-subsystem-version=1
+LDFLAGS += -Wl,--major-os-version=10 -Wl,--minor-os-version=0 -Wl,--major-subsystem-version=10 -Wl,--minor-subsystem-version=0
 # The use of -Wl,/delayload: here implies we're using llvm-mingw
 LDFLAGS += -Wl,/delayload:ws2_32.dll -Wl,/delayload:setupapi.dll -Wl,/delayload:ole32.dll -Wl,/delayload:advapi32.dll
 VERSION := $(patsubst "%",%,$(filter "%",$(file < version.h)))
-wg: wincompat/libc.o wincompat/init.o wincompat/loader.o wincompat/resources.o
+wg: wincompat/libc.o wincompat/init.o wincompat/load_config.o wincompat/loader.o wincompat/resources.o
 wincompat/resources.o: wincompat/resources.rc wincompat/manifest.xml
 	$(WINDRES) -DVERSION_STR=$(VERSION) -O coff -c 65001 -i $< -o $@
 endif

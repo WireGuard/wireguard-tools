@@ -10,21 +10,15 @@
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x4
 #endif
 
-extern void NTAPI RtlGetNtVersionNumbers(DWORD *major, DWORD *minor, DWORD *build);
-bool is_win7 = false;
-
 __attribute__((constructor)) static void init(void)
 {
-	char *colormode;
-	DWORD console_mode, major, minor;
 	HANDLE stdout_handle;
+	DWORD console_mode;
 	WSADATA wsaData;
+	char *colormode;
 
 	if (!SetDllDirectoryA("") || !SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32))
 		abort();
-
-	RtlGetNtVersionNumbers(&major, &minor, NULL);
-	is_win7 = (major == 6 && minor <= 1) || major < 6;
 
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 

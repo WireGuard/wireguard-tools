@@ -86,11 +86,11 @@ parse_options() {
 }
 
 detect_launchd() {
-	unset LAUNCHED_BY_LAUNCHD
+	LAUNCHED_BY_LAUNCHD=1
 	local line
 	while read -r line; do
-		if [[ $line =~ ^\s*domain\ =\  ]]; then
-			LAUNCHED_BY_LAUNCHD=1
+		if [[ $line =~ "^\s*\(pid $$ is not managed by launchd\)" ]]; then
+			unset LAUNCHED_BY_LAUNCHD
 			break
 		fi
 	done < <(launchctl procinfo $$ 2>/dev/null)

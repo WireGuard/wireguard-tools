@@ -226,6 +226,7 @@ static inline bool parse_endpoint(struct sockaddr *endpoint, const char *value)
 			fprintf(stderr, "Unable to find port of endpoint: `%s'\n", value);
 			return false;
 		}
+		hints.ai_family = AF_INET6;
 	} else {
 		begin = mutable;
 		end = strrchr(mutable, ':');

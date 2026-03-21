@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
- * Copyright (C) 2020 Jason A. Donenfeld. All Rights Reserved.
+ * Copyright (C) 2020-2026 Jason A. Donenfeld. All Rights Reserved.
  */
 
 #include <windows.h>
@@ -26,7 +26,7 @@ BEGIN
       VALUE "FileDescription", "WireGuard wg(8) CLI: Fast, Modern, Secure VPN Tunnel"
       VALUE "FileVersion", EXPAND(VERSION_STR)
       VALUE "InternalName", "wg"
-      VALUE "LegalCopyright", "Copyright © 2015-2020 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved."
+      VALUE "LegalCopyright", "Copyright © 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved."
       VALUE "OriginalFilename", "wg.exe"
       VALUE "ProductName", "WireGuard"
       VALUE "ProductVersion", EXPAND(VERSION_STR)

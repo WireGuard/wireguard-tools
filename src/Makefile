@@ -3,7 +3,7 @@
 # Copyright (C) 2015-2026 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 
 PKG_CONFIG ?= pkg-config
-PREFIX ?= /usr
+PREFIX ?= /usr/local
 DESTDIR ?=
 SYSCONFDIR ?= /etc
 BINDIR ?= $(PREFIX)/bin

@@ -890,30 +890,25 @@ static int string_list_add(struct string_list *list, const char *str)
 	return 0;
 }
 
-struct interface {
-	const char *name;
-};
-
 static int parse_infomsg(const struct nlattr *attr, void *data)
 {
-	struct interface *interface = data;
-
+	const char **interface = data;
 	if (mnl_attr_get_type(attr) == IFLA_IFNAME)
-		interface->name = mnl_attr_get_str(attr);
+		*interface = mnl_attr_get_str(attr);
 	return MNL_CB_OK;
 }
 
 static int read_devices_cb(const struct nlmsghdr *nlh, void *data)
 {
 	struct string_list *list = data;
-	struct interface interface = { 0 };
+	char *interface = NULL;
 	int ret;
 
 	ret = mnl_attr_parse(nlh, sizeof(struct ifinfomsg), parse_infomsg, &interface);
 	if (ret != MNL_CB_OK)
 		return ret;
-	if (interface.name)
-		ret = string_list_add(list, interface.name);
+	if (interface)
+		ret = string_list_add(list, interface);
 	if (ret < 0)
 		return ret;
 	if (nlh->nlmsg_type != NLMSG_DONE)
